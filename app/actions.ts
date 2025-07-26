@@ -801,7 +801,7 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
       console.log(`🤖 AI Analysis attempt ${attempt}/${maxRetries}`)
 
       // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "AIzaSyDYmCBFbwrg18WSoRX92ogxzOskaSKFp4A"
+      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
       if (!apiKey) {
         throw new Error("Google API key is not configured")
       }
@@ -908,7 +908,7 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
       console.log(`💬 Chat attempt ${attempt}/${maxRetries}`)
 
       // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "AIzaSyDYmCBFbwrg18WSoRX92ogxzOskaSKFp4A"
+      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
       if (!apiKey) {
         throw new Error("Google API key is not configured")
       }

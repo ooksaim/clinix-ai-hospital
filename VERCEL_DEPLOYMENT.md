@@ -66,25 +66,25 @@
 
 ```
 Name: GOOGLE_AI_API_KEY
-Value: AIzaSyDYmCBFbwrg18WSoRX92ogxzOskaSKFp4A
+Value: [YOUR_NEW_GOOGLE_API_KEY_HERE]
 Environment: Production ✅
 ```
 
 ```
 Name: AIRTABLE_BASE_ID
-Value: appdo1HD1AP0XLkLr  
+Value: [YOUR_AIRTABLE_BASE_ID_HERE]
 Environment: Production ✅
 ```
 
 ```
 Name: AIRTABLE_TOKEN
-Value: patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1
+Value: [YOUR_AIRTABLE_TOKEN_HERE]
 Environment: Production ✅
 ```
 
 ```
 Name: NEXT_PUBLIC_APP_URL
-Value: https://clinix-ai-hospital-ooksaim.vercel.app
+Value: https://clinix-ai-hospital-2-ooksaim.vercel.app
 Environment: Production ✅
 ```
 
