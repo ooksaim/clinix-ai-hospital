@@ -60,19 +60,35 @@
 
 ## 🔧 **Environment Variables Setup**
 
-**In Vercel Dashboard → Project Settings → Environment Variables:**
+**In Vercel Deployment Screen → Environment Variables Section:**
 
-```bash
-# Google AI API Key
-GOOGLE_AI_API_KEY=AIzaSyDYmCBFbwrg18WSoRX92ogxzOskaSKFp4A
+**⚠️ IMPORTANT: Enter values directly, NOT as secrets!**
 
-# Airtable Configuration
-AIRTABLE_BASE_ID=appdo1HD1AP0XLkLr
-AIRTABLE_TOKEN=patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1
-
-# App URL (Vercel will auto-generate this)
-NEXT_PUBLIC_APP_URL=https://your-project-name.vercel.app
 ```
+Name: GOOGLE_AI_API_KEY
+Value: AIzaSyDYmCBFbwrg18WSoRX92ogxzOskaSKFp4A
+Environment: Production ✅
+```
+
+```
+Name: AIRTABLE_BASE_ID
+Value: appdo1HD1AP0XLkLr  
+Environment: Production ✅
+```
+
+```
+Name: AIRTABLE_TOKEN
+Value: patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1
+Environment: Production ✅
+```
+
+```
+Name: NEXT_PUBLIC_APP_URL
+Value: https://clinix-ai-hospital-ooksaim.vercel.app
+Environment: Production ✅
+```
+
+**🔥 Do NOT use "Secret" - Enter values directly!**
 
 ## 🎯 **After Deployment**
 
