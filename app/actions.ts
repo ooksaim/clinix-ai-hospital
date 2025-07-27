@@ -116,10 +116,12 @@ export type TriageAssessment = {
   patientId: string
   urgencyLevel: 1 | 2 | 3 | 4 | 5 // 1=emergency, 5=non-urgent
   estimatedWaitTime: number
-  priority: 'immediate' | 'urgent' | 'semi-urgent' | 'non-urgent'
+  priority: 'immediate' | 'urgent' | 'semi-urgent' | 'less-urgent' | 'non-urgent'
   aiRecommendation: string
   warningFlags: string[]
   assessmentTime: string
+  whoCode?: 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' // WHO standard codes
+  whoLevel?: 1 | 2 | 3 | 4 | 5 // WHO triage levels
 }
 
 // Airtable configuration
@@ -1017,26 +1019,58 @@ export async function performAITriage(symptoms: string, vitalSigns?: VitalSigns)
         urgencyLevel: 1,
         estimatedWaitTime: 0,
         priority: 'immediate',
-        aiRecommendation: 'Emergency keywords detected - immediate medical attention required',
-        warningFlags: ['Emergency symptoms detected', 'Requires immediate assessment'],
-        assessmentTime: new Date().toISOString()
+        aiRecommendation: 'WHO Level 1 (RED) - Emergency keywords detected. Immediate resuscitation required per WHO ETAT guidelines.',
+        warningFlags: ['WHO RED ALERT', 'Emergency symptoms detected', 'Requires immediate assessment'],
+        assessmentTime: new Date().toISOString(),
+        whoCode: 'RED',
+        whoLevel: 1
       }
     }
 
-    // Use shorter, faster AI prompt for non-emergency cases
-    const triagePrompt = `Triage assessment for: ${symptoms}
-    
-Provide: URGENCY:[1-5] PRIORITY:[immediate/urgent/semi-urgent/non-urgent] WAIT:[minutes] FLAGS:[warnings]`
+    // Use WHO-compliant triage assessment
+    const triagePrompt = `WHO-Compliant Medical Triage Assessment:
+
+PATIENT PRESENTATION: ${symptoms}
+${vitalSigns ? `VITAL SIGNS:
+- Blood Pressure: ${vitalSigns.bloodPressure || 'Not recorded'}
+- Heart Rate: ${vitalSigns.heartRate || 'Not recorded'} bpm  
+- Temperature: ${vitalSigns.temperature || 'Not recorded'}°C
+- Respiratory Rate: ${vitalSigns.respiratoryRate || 'Not recorded'}/min
+- Oxygen Saturation: ${vitalSigns.oxygenSaturation || 'Not recorded'}%` : 'VITAL SIGNS: Not available'}
+
+Apply WHO Emergency Triage Assessment & Treatment (ETAT) Guidelines:
+
+ASSESS USING ABCD APPROACH:
+A - AIRWAY: Obstruction, stridor, inability to speak?
+B - BREATHING: Rate, effort, cyanosis, SpO2 <90%?  
+C - CIRCULATION: Pulse, BP, perfusion, shock signs?
+D - DISABILITY: Consciousness level (GCS), neurological deficits?
+
+WHO TRIAGE LEVELS:
+1 = RED (Resuscitation) - Immediate life-threat, 0 min wait
+2 = ORANGE (Emergency) - Imminent life-threat, max 10 min wait  
+3 = YELLOW (Urgent) - Potentially serious, max 30 min wait
+4 = GREEN (Semi-urgent) - Stable condition, max 60 min wait
+5 = BLUE (Non-urgent) - Minor condition, 120+ min or primary care
+
+CRITICAL THRESHOLDS:
+- SBP <90 or HR <50/>150 or RR <10/>30 or Temp <35/>40°C or SpO2 <90% = Level 1-2
+- Unconscious (GCS <9) = Level 1
+- Severe pain (8-10/10) with vital changes = Level 2
+
+Provide: WHO_LEVEL:[1-5] WHO_CODE:[RED/ORANGE/YELLOW/GREEN/BLUE] PRIORITY:[immediate/urgent/semi-urgent/less-urgent/non-urgent] WAIT:[minutes] FLAGS:[clinical warnings]`
 
     const aiResponse = await analyzeSymptomsWithAI(triagePrompt)
     
-    // Parse AI response with fallbacks
-    const urgencyMatch = aiResponse.match(/URGENCY:\s*(\d)/i)
-    const priorityMatch = aiResponse.match(/PRIORITY:\s*(immediate|urgent|semi-urgent|non-urgent)/i)
+    // Parse WHO-compliant AI response  
+    const whoLevelMatch = aiResponse.match(/WHO_LEVEL:\s*(\d)/i)
+    const whoCodeMatch = aiResponse.match(/WHO_CODE:\s*(RED|ORANGE|YELLOW|GREEN|BLUE)/i)
+    const priorityMatch = aiResponse.match(/PRIORITY:\s*(immediate|urgent|semi-urgent|less-urgent|non-urgent)/i)
     const waitTimeMatch = aiResponse.match(/WAIT:\s*(\d+)/i)
     
-    const urgencyLevel = urgencyMatch ? parseInt(urgencyMatch[1]) as 1|2|3|4|5 : 3
-    const priority = priorityMatch ? priorityMatch[1].toLowerCase() as any : 'semi-urgent'
+    const urgencyLevel = whoLevelMatch ? parseInt(whoLevelMatch[1]) as 1|2|3|4|5 : 3
+    const whoCode = whoCodeMatch ? whoCodeMatch[1].toUpperCase() as 'RED'|'ORANGE'|'YELLOW'|'GREEN'|'BLUE' : 'YELLOW'
+    const priority = priorityMatch ? priorityMatch[1].toLowerCase() as 'immediate'|'urgent'|'semi-urgent'|'less-urgent'|'non-urgent' : 'semi-urgent'
     const waitTime = waitTimeMatch ? parseInt(waitTimeMatch[1]) : 30
     
     // Extract warning flags (simplified)
@@ -1049,21 +1083,25 @@ Provide: URGENCY:[1-5] PRIORITY:[immediate/urgent/semi-urgent/non-urgent] WAIT:[
       urgencyLevel,
       estimatedWaitTime: waitTime,
       priority,
-      aiRecommendation: aiResponse,
+      aiRecommendation: `WHO Triage Assessment (${whoCode}): ${aiResponse}`,
       warningFlags,
-      assessmentTime: new Date().toISOString()
+      assessmentTime: new Date().toISOString(),
+      whoCode, // Add WHO code to response
+      whoLevel: urgencyLevel
     }
   } catch (error) {
     console.error('❌ AI Triage failed:', error)
-    // Return safe default for critical system
+    // Return safe WHO-compliant default for critical system
     return {
       patientId: '',
       urgencyLevel: 3,
       estimatedWaitTime: 30,
       priority: 'semi-urgent',
-      aiRecommendation: 'Unable to complete AI triage. Please perform manual assessment.',
-      warningFlags: ['AI Assessment Failed'],
-      assessmentTime: new Date().toISOString()
+      aiRecommendation: 'WHO Level 3 (YELLOW) - Unable to complete AI triage. Manual WHO ETAT assessment required by trained medical professional.',
+      warningFlags: ['AI Assessment Failed', 'Manual WHO Triage Required'],
+      assessmentTime: new Date().toISOString(),
+      whoCode: 'YELLOW',
+      whoLevel: 3
     }
   }
 }
