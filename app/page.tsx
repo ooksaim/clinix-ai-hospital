@@ -8,7 +8,8 @@ import { EmergencyProtocolManager } from "@/components/emergency-protocol-manage
 import { Footer } from "@/components/footer"
 import { Header } from "@/components/header"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Stethoscope, FileText, Activity, Brain, BarChart3, Zap, Hospital, AlertTriangle } from "lucide-react"
+import { Users, Stethoscope, FileText, Activity, Brain, BarChart3, Zap, AlertTriangle } from "lucide-react"
+import { Building2 as Hospital } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getDashboardStats } from "@/app/actions"
 
