@@ -1,6 +1,7 @@
 "use server"
 
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import OpenAI from "openai"
 
 // Define message type for chat
 export type Message = {
@@ -1876,6 +1877,58 @@ export async function detectEmergencyPatterns(): Promise<{
         recommendation: 'Check system status and retry monitoring'
       }],
       emergencyScore: 0
+    }
+  }
+}
+
+// OpenAI Whisper Speech-to-Text Function
+export async function transcribeAudioWithWhisper(audioBase64: string, fileName: string): Promise<string> {
+  try {
+    console.log("🎙️ Starting Whisper transcription...")
+    
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey || apiKey.includes("your_openai_api_key_here")) {
+      throw new Error("OpenAI API key is not configured")
+    }
+
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    })
+
+    // Convert base64 string back to ArrayBuffer, then to File
+    const binaryString = atob(audioBase64)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    
+    const audioBlob = new Blob([bytes], { type: 'audio/webm' })
+    const audioFile = new File([audioBlob], fileName, { type: 'audio/webm' })
+
+    // Create form data for the transcription request
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: "whisper-1",
+      language: "en", // You can make this configurable
+      response_format: "text",
+      temperature: 0.2, // Lower temperature for more consistent medical transcription
+    })
+
+    console.log("✅ Whisper transcription completed")
+    return transcription as string
+    
+  } catch (error: any) {
+    console.error("❌ Whisper transcription error:", error)
+    
+    if (error.status === 401) {
+      throw new Error("Invalid OpenAI API key. Please check your API key configuration.")
+    } else if (error.status === 429) {
+      throw new Error("OpenAI API quota exceeded. Please wait a moment and try again.")
+    } else if (error.status === 413) {
+      throw new Error("Audio file is too large. Please use a smaller audio file (max 25MB).")
+    } else {
+      throw new Error(`Transcription failed: ${error.message}`)
     }
   }
 }

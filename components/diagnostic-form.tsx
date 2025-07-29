@@ -6,12 +6,14 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { Loader2, AlertCircle, X, ImagePlus, Info, MessageSquare, Copy, Check, Microscope } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, AlertCircle, X, ImagePlus, Info, MessageSquare, Copy, Check, Microscope, Mic, MicOff, Volume2, Plus } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   analyzeSymptomsWithAI,
   createVisitWithDiagnosis,
   createVisitWithDateOnly,
+  transcribeAudioWithWhisper,
   type Patient,
   type Visit,
 } from "@/app/actions"
@@ -38,12 +40,244 @@ export function DiagnosticForm({ selectedPatient, onVisitCreated }: DiagnosticFo
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [activeTab, setActiveTab] = useState<string>("result")
   const [processingImages, setProcessingImages] = useState(false)
+
+  // Voice recording states
+  const [isRecording, setIsRecording] = useState(false)
+  const [voiceTranscript, setVoiceTranscript] = useState("")
+  const [voiceError, setVoiceError] = useState<string | null>(null)
+  const [processingVoice, setProcessingVoice] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
   const [extractedText, setExtractedText] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
   const [creatingVisit, setCreatingVisit] = useState(false)
 
   // Initialize Tesseract worker
   const [worker, setWorker] = useState<any>(null)
+
+  // Voice recording functions using MediaRecorder and Whisper API
+  const startVoiceRecording = async () => {
+    try {
+      console.log("🎤 Starting voice recording...")
+      
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      
+      // Initialize MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm' // Use webm format for better compatibility
+      })
+      
+      audioChunksRef.current = []
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+      
+      mediaRecorder.onstop = async () => {
+        console.log("🛑 Recording stopped, processing audio...")
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        
+        setProcessingVoice(true)
+        
+        try {
+          console.log("🤖 Converting audio to base64 for Whisper API...")
+          
+          // Convert Blob to base64 string for server action
+          const arrayBuffer = await audioBlob.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          let binaryString = ''
+          for (let i = 0; i < uint8Array.byteLength; i++) {
+            binaryString += String.fromCharCode(uint8Array[i])
+          }
+          const audioBase64 = btoa(binaryString)
+          const fileName = `recording_${Date.now()}.webm`
+          
+          console.log("🤖 Sending audio to Whisper API...")
+          const transcript = await transcribeAudioWithWhisper(audioBase64, fileName)
+          
+          if (transcript.trim()) {
+            setVoiceTranscript(transcript.trim())
+            console.log("✅ Transcription received:", transcript)
+            
+            // Automatically extract symptoms after transcription
+            setTimeout(async () => {
+              await extractSymptomsFromTranscript(transcript.trim())
+            }, 500)
+          } else {
+            setVoiceError("No speech was detected in the recording.")
+          }
+        } catch (error: any) {
+          console.error("❌ Transcription failed:", error)
+          setVoiceError(error.message || "Failed to transcribe audio")
+        } finally {
+          setProcessingVoice(false)
+        }
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop())
+      }
+      
+      mediaRecorder.start()
+      mediaRecorderRef.current = mediaRecorder
+      setIsRecording(true)
+      setVoiceError(null)
+      setVoiceTranscript("")
+      
+      console.log("🚀 Recording started...")
+      
+    } catch (error: any) {
+      console.error("❌ Error starting voice recording:", error)
+      
+      if (error.name === 'NotAllowedError') {
+        setVoiceError("Microphone access denied. Please allow microphone access and try again.")
+      } else if (error.name === 'NotFoundError') {
+        setVoiceError("No microphone found. Please check your audio devices.")
+      } else {
+        setVoiceError("Failed to start voice recording. Please try again.")
+      }
+      setIsRecording(false)
+    }
+  }
+
+  const stopVoiceRecording = () => {
+    try {
+      console.log("🛑 Stopping voice recording...")
+      
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop()
+      }
+      
+      setIsRecording(false)
+      
+    } catch (error) {
+      console.error("❌ Error stopping voice recording:", error)
+      setVoiceError("Failed to stop voice recording")
+      setIsRecording(false)
+    }
+  }
+
+  const extractSymptomsFromTranscript = async (transcript: string) => {
+    try {
+      console.log("🔍 Extracting symptoms from transcript:", transcript)
+      
+      // Always do basic extraction first as a fallback
+      const basicExtraction = extractBasicSymptoms(transcript)
+      
+      try {
+        // Try AI extraction first
+        const prompt = `
+You are a medical AI assistant. Extract and summarize the key medical symptoms from this patient-doctor conversation transcript:
+
+CONVERSATION TRANSCRIPT:
+"${transcript}"
+
+INSTRUCTIONS:
+1. Extract only the medical symptoms, complaints, and relevant health information
+2. Ignore non-medical conversation (greetings, scheduling, etc.)
+3. Format as a clear, clinical summary
+4. Include timing/duration if mentioned
+5. Focus on what the patient is experiencing
+
+Please provide a concise medical summary of the symptoms mentioned:
+        `.trim()
+
+        console.log("🤖 Attempting AI symptom extraction...")
+        const extractedSymptoms = await analyzeSymptomsWithAI(prompt)
+        
+        // Add AI-extracted symptoms to the symptoms field
+        const currentSymptoms = symptoms.trim()
+        const newSymptoms = currentSymptoms 
+          ? `${currentSymptoms}\n\n--- VOICE RECORDED SYMPTOMS (AI Enhanced) ---\n${extractedSymptoms}`
+          : extractedSymptoms
+
+        setSymptoms(newSymptoms)
+        console.log("✅ AI-enhanced symptoms added to form")
+        
+      } catch (aiError) {
+        console.warn("⚠️ AI extraction failed, using basic extraction:", aiError)
+        
+        // Fallback to basic extraction
+        const currentSymptoms = symptoms.trim()
+        const newSymptoms = currentSymptoms 
+          ? `${currentSymptoms}\n\n--- VOICE RECORDED CONVERSATION ---\n${basicExtraction}`
+          : basicExtraction
+
+        setSymptoms(newSymptoms)
+        console.log("✅ Basic symptoms added to form")
+      }
+      
+      setVoiceTranscript("") // Clear transcript after processing
+      
+    } catch (error) {
+      console.error("❌ Error extracting symptoms from transcript:", error)
+      setVoiceError("Failed to process voice transcript")
+    }
+  }
+
+  // Basic symptom extraction without AI
+  const extractBasicSymptoms = (transcript: string): string => {
+    const medicalKeywords = [
+      'pain', 'headache', 'fever', 'cough', 'nausea', 'vomiting', 'diarrhea', 
+      'fatigue', 'tired', 'dizzy', 'sore throat', 'congestion', 'shortness of breath',
+      'chest pain', 'abdominal pain', 'back pain', 'joint pain', 'muscle pain',
+      'chills', 'sweating', 'rash', 'itching', 'swelling', 'bleeding', 'bruising',
+      'difficulty breathing', 'stomach ache', 'upset stomach', 'stuffy nose',
+      'runny nose', 'sneezing', 'wheezing', 'burning', 'stinging', 'aching',
+      'throbbing', 'sharp pain', 'dull pain', 'cramps', 'spasms', 'weakness',
+      'numbness', 'tingling', 'stiffness', 'inflammation', 'infection',
+      'temperature', 'hot', 'cold', 'shivering', 'trembling', 'shaking'
+    ]
+    
+    const timeKeywords = [
+      'days', 'day', 'hours', 'hour', 'minutes', 'minute', 'weeks', 'week',
+      'months', 'month', 'yesterday', 'today', 'morning', 'afternoon', 'evening',
+      'night', 'ago', 'since', 'for', 'started', 'began', 'began', 'ongoing'
+    ]
+    
+    // Split into sentences and filter for medical content
+    const sentences = transcript.split(/[.!?]+/).filter(sentence => {
+      const lowerSentence = sentence.toLowerCase()
+      return sentence.trim().length > 0 && 
+             medicalKeywords.some(keyword => lowerSentence.includes(keyword.toLowerCase()))
+    })
+    
+    if (sentences.length > 0) {
+      // Extract and format medical sentences
+      const medicalSentences = sentences.map(sentence => {
+        const trimmed = sentence.trim()
+        // Capitalize first letter if not already
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+      })
+      
+      return `Medical symptoms from conversation:\n${medicalSentences.join('. ')}.`
+    } else {
+      // If no medical keywords found, look for common patient expressions
+      const patientExpressions = [
+        'feel', 'feeling', 'hurt', 'hurts', 'uncomfortable', 'sick', 'ill',
+        'problem', 'issue', 'trouble', 'wrong', 'bad', 'worse', 'better'
+      ]
+      
+      const generalSentences = transcript.split(/[.!?]+/).filter(sentence => {
+        const lowerSentence = sentence.toLowerCase()
+        return sentence.trim().length > 0 && 
+               patientExpressions.some(expr => lowerSentence.includes(expr.toLowerCase()))
+      })
+      
+      if (generalSentences.length > 0) {
+        return `Patient statements from conversation:\n${generalSentences.join('. ').trim()}.`
+      } else {
+        return `Patient conversation transcript:\n"${transcript.trim()}"`
+      }
+    }
+  }
+
+  const clearVoiceTranscript = () => {
+    setVoiceTranscript("")
+    setVoiceError(null)
+  }
 
   useEffect(() => {
     const initWorker = async () => {
@@ -382,12 +616,129 @@ IMPORTANT: Include a disclaimer that this is not professional medical advice and
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            placeholder="Example: Patient has had a headache for 3 days, along with a mild fever of 100°F and a sore throat..."
-            className="min-h-[150px] text-base"
-            value={symptoms}
-            onChange={(e) => setSymptoms(e.target.value)}
-          />
+          <div className="space-y-3">
+            <Textarea
+              placeholder="Example: Patient has had a headache for 3 days, along with a mild fever of 100°F and a sore throat..."
+              className="min-h-[150px] text-base"
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+            />
+
+            {/* Voice Recording Controls */}
+            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">Voice Recording (Whisper AI)</span>
+                </div>
+                
+                {voiceTranscript && (
+                  <Badge variant="secondary" className="text-xs">
+                    Transcript ready
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!isRecording ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={startVoiceRecording}
+                          disabled={processingVoice}
+                          className="flex items-center gap-2"
+                        >
+                          <Mic className="h-4 w-4" />
+                          Start Recording
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Record patient-doctor conversation using OpenAI Whisper</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={stopVoiceRecording}
+                    disabled={processingVoice}
+                    className="flex items-center gap-2 animate-pulse"
+                  >
+                    <MicOff className="h-4 w-4" />
+                    Recording... (Click to stop)
+                  </Button>
+                )}
+
+                {processingVoice && (
+                  <Button type="button" size="sm" disabled className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Transcribing...
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Voice Transcript Display */}
+            {voiceTranscript && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Mic className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Whisper AI Transcript</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearVoiceTranscript}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-blue-700 italic">"{voiceTranscript}"</p>
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-blue-600">
+                    Transcription completed. Use the button to extract symptoms manually if needed.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => extractSymptomsFromTranscript(voiceTranscript)}
+                    disabled={processingVoice}
+                    className="bg-white hover:bg-blue-50 border-blue-300 text-blue-700"
+                  >
+                    {processingVoice ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Extract Symptoms
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Voice Error Display */}
+            {voiceError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{voiceError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
