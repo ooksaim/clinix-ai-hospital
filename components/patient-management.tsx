@@ -247,9 +247,11 @@ export function PatientManagement() {
     try {
       const date = new Date(dateString)
       return date.toLocaleDateString("en-US", {
-        month: "short",
+        month: "long",   // Show full month name
         day: "numeric",
         year: "numeric",
+        hour: "2-digit", // Add time display
+        minute: "2-digit"
       })
     } catch (error) {
       return dateString
@@ -795,17 +797,15 @@ export function PatientManagement() {
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="max-w-xs">
-                              <div className="text-xs sm:text-sm text-gray-900 line-clamp-2">
-                                {visit.symptoms.length > 50 ? `${visit.symptoms.substring(0, 50)}...` : visit.symptoms}
+                              <div className="text-xs sm:text-sm text-gray-900">
+                                {visit.symptoms} {/* Show full symptoms without truncation */}
                               </div>
                             </div>
                           </td>
                           <td className="px-3 sm:px-6 py-3 sm:py-4">
                             <div className="max-w-xs">
-                              <div className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2">
-                                {visit.diagnosis.length > 50
-                                  ? `${visit.diagnosis.substring(0, 50)}...`
-                                  : visit.diagnosis}
+                              <div className="text-xs sm:text-sm font-medium text-gray-900">
+                                {visit.diagnosis} {/* Show full diagnosis without truncation */}
                               </div>
                             </div>
                           </td>

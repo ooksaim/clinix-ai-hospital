@@ -400,11 +400,11 @@ export function HospitalDashboard({ patients = [], recentVisits = [], triageQueu
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">
-                    <strong>Symptoms:</strong> {visit.symptoms.slice(0, 50)}...
+                    <strong>Symptoms:</strong> {visit.symptoms}
                   </p>
                   {visit.diagnosis && (
                     <p className="text-sm text-blue-600">
-                      <strong>Diagnosis:</strong> {visit.diagnosis.slice(0, 40)}...
+                      <strong>Diagnosis:</strong> {visit.diagnosis}
                     </p>
                   )}
                 </div>

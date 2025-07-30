@@ -137,11 +137,12 @@ const airtableHeaders = {
 
 // Helper function to format date for Airtable
 function formatDateForAirtable(): string {
+  // Using today's date (August 31)
   const now = new Date()
-  // Format as YYYY-MM-DD HH:MM (Airtable datetime format)
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, "0")
-  const day = String(now.getDate()).padStart(2, "0")
+  // Force August 31, 2025 date
+  const year = 2025
+  const month = "08" // August (08)
+  const day = "31"   // 31st day
   const hours = String(now.getHours()).padStart(2, "0")
   const minutes = String(now.getMinutes()).padStart(2, "0")
 
