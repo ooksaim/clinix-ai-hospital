@@ -125,9 +125,9 @@ export type TriageAssessment = {
   whoLevel?: 1 | 2 | 3 | 4 | 5 // WHO triage levels
 }
 
-// Airtable configuration
-const AIRTABLE_BASE_ID = "appdo1HD1AP0XLkLr"
-const AIRTABLE_TOKEN = "patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1"
+// Airtable configuration - Read from environment variables
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "appdo1HD1AP0XLkLr"
+const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1"
 const AIRTABLE_API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`
 
 const airtableHeaders = {
