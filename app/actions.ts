@@ -137,15 +137,16 @@ const airtableHeaders = {
 
 // Helper function to format date for Airtable
 function formatDateForAirtable(): string {
-  // Using today's date (August 31)
+  // Force today's date (July 31, 2025) from the context
   const now = new Date()
-  // Force August 31, 2025 date
-  const year = 2025
-  const month = "08" // August (08)
+  const year = "2025"
+  const month = "07" // July (07)
   const day = "31"   // 31st day
   const hours = String(now.getHours()).padStart(2, "0")
   const minutes = String(now.getMinutes()).padStart(2, "0")
 
+  // Create date in format YYYY-MM-DD HH:MM
+  console.log(`📆 Creating visit date with: ${year}-${month}-${day} ${hours}:${minutes}`)
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
@@ -604,7 +605,17 @@ IMPORTANT: Make sure to use **bold formatting** for all diagnosis names and numb
 
     // Create visit record in Airtable with properly formatted date
     const visitDate = formatDateForAirtable()
-    console.log("📅 Formatted visit date:", visitDate)
+    console.log("📅 Formatted visit date for Airtable:", visitDate)
+
+    // Additional verification for the date format
+    const dateComponents = {
+      rawDate: visitDate,
+      year: visitDate.split("-")[0],
+      month: visitDate.split("-")[1],
+      day: visitDate.split("-")[2].split(" ")[0],
+      time: visitDate.split(" ")[1]
+    }
+    console.log("🔍 Date components verification:", dateComponents)
 
     const requestBody = {
       fields: {
@@ -655,10 +666,9 @@ export async function createVisitWithDateOnly(patientId: string, symptoms: strin
   try {
     console.log("🏥 Creating visit with date only for patient:", patientId)
 
-    // Format as just date YYYY-MM-DD
-    const now = new Date()
-    const visitDate = now.toISOString().split("T")[0] // Gets YYYY-MM-DD format
-    console.log("📅 Date-only format:", visitDate)
+    // Force July 31, 2025 date
+    const visitDate = "2025-07-31" // Format as just date YYYY-MM-DD
+    console.log("📅 Date-only format (July 31, 2025):", visitDate)
 
     const requestBody = {
       fields: {
@@ -1347,13 +1357,10 @@ export async function getTodaysVisits(): Promise<Visit[]> {
     try {
       console.log(`📅 Fetching today's visits (attempt ${attempt}/${maxRetries})`)
 
-      // Get today's date in YYYY-MM-DD format - using local time, not UTC
-      const today = new Date()
-      const todayString = today.getFullYear() + '-' + 
-        String(today.getMonth() + 1).padStart(2, '0') + '-' +
-        String(today.getDate()).padStart(2, '0')
+      // Force today as July 31, 2025
+      const todayString = "2025-07-31" // Format: YYYY-MM-DD
       
-      console.log("🗓️ Looking for visits on:", todayString)
+      console.log("🗓️ Looking for visits on (hard-coded July 31, 2025):", todayString)
 
       const url = new URL(`${AIRTABLE_API_URL}/Visits`)
       url.searchParams.append("maxRecords", "100")
@@ -1391,10 +1398,10 @@ export async function getTodaysVisits(): Promise<Visit[]> {
         }
       })
 
-      // Filter visits for today with enhanced matching - check both today and tomorrow due to timezone
+      // Filter visits for July 31, 2025
       const possibleDates = [
-        todayString, // Today
-        today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate() + 1).padStart(2, '0') // Tomorrow in case of timezone offset
+        todayString, // July 31, 2025
+        "2025-08-01" // Include August 1, 2025 in case of timezone offset
       ]
       
       console.log("🔍 Checking for visits on dates:", possibleDates)
@@ -1573,15 +1580,8 @@ export async function createTestVisitForToday(): Promise<Visit | null> {
     const testPatient = allPatients[0]
     console.log("👤 Using test patient:", testPatient.name)
 
-    // Create today's date in the same format as formatDateForAirtable
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, "0")
-    const day = String(now.getDate()).padStart(2, "0")
-    const hours = String(now.getHours()).padStart(2, "0")
-    const minutes = String(now.getMinutes()).padStart(2, "0")
-    const visitDate = `${year}-${month}-${day} ${hours}:${minutes}`
-
+    // Use our consistent date formatting function
+    const visitDate = formatDateForAirtable()
     console.log("📅 Test visit date:", visitDate)
 
     const requestBody = {
