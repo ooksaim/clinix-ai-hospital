@@ -67,7 +67,7 @@ export function AIQuotaMonitor() {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm sm:text-base font-medium flex items-center gap-2">
           <Zap className="h-4 w-4 text-blue-600 flex-shrink-0" />
-          <span className="flex-1">AI Quota Status</span>
+          <span className="flex-1">GPT-3.5 Turbo Quota</span>
           <Button
             variant="ghost"
             size="sm"

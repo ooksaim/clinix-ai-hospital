@@ -80,27 +80,27 @@ export function AITriageSystem({ onTriageComplete }: AITriageSystemProps) {
   const getUrgencyBadge = (level: number) => {
     if (level === 1) return { 
       color: 'bg-red-600 text-white', 
-      text: 'CRITICAL - Immediate', 
+      text: 'RED - Immediate', 
       icon: <AlertTriangle className="h-4 w-4" /> 
     }
     if (level === 2) return { 
       color: 'bg-orange-500 text-white', 
-      text: 'URGENT - 15 mins', 
+      text: 'ORANGE - 10 mins', 
       icon: <Zap className="h-4 w-4" /> 
     }
     if (level === 3) return { 
       color: 'bg-yellow-500 text-white', 
-      text: 'SEMI-URGENT - 30 mins', 
+      text: 'YELLOW - 30 mins', 
       icon: <Clock className="h-4 w-4" /> 
     }
     if (level === 4) return { 
-      color: 'bg-blue-500 text-white', 
-      text: 'LESS URGENT - 1 hour', 
+      color: 'bg-green-500 text-white', 
+      text: 'GREEN - 60 mins', 
       icon: <Activity className="h-4 w-4" /> 
     }
     return { 
-      color: 'bg-gray-500 text-white', 
-      text: 'NON-URGENT - 2+ hours', 
+      color: 'bg-blue-500 text-white', 
+      text: 'BLUE - 2+ hours', 
       icon: <User className="h-4 w-4" /> 
     }
   }
