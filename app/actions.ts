@@ -788,7 +788,7 @@ function generateFallbackResponse(prompt: string): string {
   return "Clinical assessment required. Please consult with medical professional for proper evaluation. AI analysis temporarily unavailable due to usage limits."
 }
 
-// PROPER AI Analysis Function with Google Gemini + Quota Management
+// PROPER AI Analysis Function with OpenAI GPT-3.5 Turbo + Quota Management
 export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
   // Check quota first
   if (!canMakeAICall()) {
@@ -801,37 +801,34 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🤖 AI Analysis attempt ${attempt}/${maxRetries}`)
+      console.log(`🤖 GPT-3.5 Turbo Analysis attempt ${attempt}/${maxRetries}`)
 
-      // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
-      if (!apiKey) {
-        throw new Error("Google API key is not configured")
+      // Use OpenAI API key from environment
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey || apiKey.includes("your_openai_api_key_here")) {
+        throw new Error("OpenAI API key is not configured")
       }
 
-      // Initialize the Google Generative AI with API key
-      const genAI = new GoogleGenerativeAI(apiKey)
-
-      // Use gemini-1.5-flash for better quota efficiency
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
-      // Generate content using the provided prompt directly
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2, // Lower temperature for efficiency
-          maxOutputTokens: 512, // Reduced token limit to save quota
-        },
+      // Initialize OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey,
       })
 
-      const response = result.response
-      const text = response.text()
+      // Generate content using GPT-3.5 Turbo with the provided prompt directly
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2, // Lower temperature for efficiency
+        max_tokens: 512, // Reduced token limit to save quota
+      })
 
+      const text = completion.choices[0]?.message?.content
+      
       if (!text) {
         throw new Error("No response received from the AI model")
       }
@@ -896,7 +893,7 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
   return generateFallbackResponse(prompt)
 }
 
-// Chat with Gemini AI (with quota management)
+// Chat with OpenAI GPT-3.5 Turbo (with quota management)
 export async function chatWithAI(messages: Message[]): Promise<string> {
   // Check quota first
   if (!canMakeAICall()) {
@@ -908,59 +905,52 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`💬 Chat attempt ${attempt}/${maxRetries}`)
+      console.log(`💬 GPT-3.5 Turbo Chat attempt ${attempt}/${maxRetries}`)
 
-      // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
-      if (!apiKey) {
-        throw new Error("Google API key is not configured")
+      // Use OpenAI API key from environment
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey || apiKey.includes("your_openai_api_key_here")) {
+        throw new Error("OpenAI API key is not configured")
       }
 
-      // Initialize the Google Generative AI with API key
-      const genAI = new GoogleGenerativeAI(apiKey)
-
-      // Use gemini-1.5-flash for chat as well
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
-      // Create a chat session
-      const chat = model.startChat({
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        },
-        // Add medical assistant context as the first message
-        history: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: "You are a helpful medical assistant AI. You provide informative responses about medical topics but always clarify that you're not providing medical diagnosis and encourage users to seek professional medical advice. Be thorough but cautious in your assessments, and always prioritize patient safety.",
-              },
-            ],
-          },
-          {
-            role: "model",
-            parts: [
-              {
-                text: "I understand my role as a helpful medical assistant AI. I'll provide informative responses about medical topics while clarifying that I'm not providing medical diagnosis and encouraging users to seek professional medical advice. I'll be thorough but cautious in my assessments and always prioritize patient safety.",
-              },
-            ],
-          },
-        ],
+      // Initialize OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey,
       })
 
-      // Format user messages for the API
+      // Prepare formatted messages for OpenAI with proper typing
+      const formattedMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+        {
+          role: "system",
+          content: "You are a helpful medical assistant AI. You provide informative responses about medical topics but always clarify that you're not providing medical diagnosis and encourage users to seek professional medical advice. Be thorough but cautious in your assessments, and always prioritize patient safety."
+        }
+      ]
+      
+      // Add all user messages with correct types
       for (const msg of messages) {
-        await chat.sendMessage(msg.content)
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          formattedMessages.push({
+            role: msg.role,
+            content: msg.content
+          })
+        }
       }
 
-      // Get the last response
-      const lastResponse = await chat.getHistory()
-      const lastModelResponse = lastResponse[lastResponse.length - 1]
+      // Generate completion with OpenAI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: formattedMessages,
+        temperature: 0.3,
+        max_tokens: 1024,
+      })
 
-      if (lastModelResponse.role === "model" && lastModelResponse.parts[0]?.text) {
+      const text = completion.choices[0]?.message?.content
+      
+      if (text) {
         console.log("✅ Chat successful on attempt", attempt)
-        return lastModelResponse.parts[0].text
+        // Increment quota usage on success
+        aiQuotaUsed++
+        return text
       }
 
       throw new Error("Failed to get a valid response from the model")
@@ -968,26 +958,34 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
       console.error(`❌ Chat attempt ${attempt} failed:`, error)
       lastError = error as Error
 
-      // Handle quota errors with retry
-      if (error instanceof Error && (error.message.includes("429") || error.message.includes("quota"))) {
-        if (attempt < maxRetries) {
-          console.log(`⏳ Chat quota exceeded, waiting before retry...`)
-          await sleep(10000) // Wait 10 seconds for chat
-          continue
-        } else {
-          throw new Error("Chat quota exceeded. Please wait a moment before continuing the conversation.")
-        }
-      }
-
-      // Handle other specific errors
+      // Handle specific quota errors with retry logic
       if (error instanceof Error) {
-        if (error.message.includes("API_KEY_INVALID") || error.message.includes("API key not valid")) {
+        if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate_limit")) {
+          if (attempt < maxRetries) {
+            console.log(`⏳ Rate limit exceeded, waiting before retry ${attempt}/${maxRetries}`)
+            // Exponential backoff: 10s, 20s
+            const waitTime = 10000 * attempt
+            console.log(`⏰ Waiting ${waitTime / 1000} seconds before retry...`)
+            await sleep(waitTime)
+            continue
+          } else {
+            throw new Error(
+              "OpenAI API quota exceeded. Please wait a few minutes before trying again, or consider upgrading your OpenAI API plan for higher limits.",
+            )
+          }
+        }
+
+        // Handle other specific OpenAI errors
+        if (error.message.includes("401") || error.message.includes("invalid_api_key") || error.message.includes("Incorrect API key")) {
           throw new Error(
-            "Invalid Google API key. Please check that your API key is correct and has the necessary permissions.",
+            "Invalid OpenAI API key. Please check that your API key is correct and active.",
           )
         }
-        if (error.message.includes("permission")) {
-          throw new Error("API key doesn't have permission to access the Generative Language API.")
+        
+        if (error.message.includes("insufficient_quota")) {
+          throw new Error(
+            "OpenAI API quota exceeded. Please check your billing and usage limits in your OpenAI dashboard.",
+          )
         }
       }
 
