@@ -117,7 +117,7 @@ export type TriageAssessment = {
   patientId: string
   urgencyLevel: 1 | 2 | 3 | 4 | 5 // 1=emergency, 5=non-urgent
   estimatedWaitTime: number
-  priority: 'immediate' | 'urgent' | 'semi-urgent' | 'less-urgent' | 'non-urgent'
+  priority: 'immediate' | 'emergency' | 'urgent' | 'semi-urgent' | 'non-urgent'
   aiRecommendation: string
   warningFlags: string[]
   assessmentTime: string
@@ -125,9 +125,9 @@ export type TriageAssessment = {
   whoLevel?: 1 | 2 | 3 | 4 | 5 // WHO triage levels
 }
 
-// Airtable configuration
-const AIRTABLE_BASE_ID = "appdo1HD1AP0XLkLr"
-const AIRTABLE_TOKEN = "patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1"
+// Airtable configuration - Read from environment variables
+const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "appdo1HD1AP0XLkLr"
+const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1"
 const AIRTABLE_API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`
 
 const airtableHeaders = {
@@ -788,7 +788,7 @@ function generateFallbackResponse(prompt: string): string {
   return "Clinical assessment required. Please consult with medical professional for proper evaluation. AI analysis temporarily unavailable due to usage limits."
 }
 
-// PROPER AI Analysis Function with Google Gemini + Quota Management
+// PROPER AI Analysis Function with GPT-3.5 Turbo + Quota Management
 export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
   // Check quota first
   if (!canMakeAICall()) {
@@ -801,36 +801,33 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🤖 AI Analysis attempt ${attempt}/${maxRetries}`)
+      console.log(`🤖 GPT-3.5 Turbo Analysis attempt ${attempt}/${maxRetries}`)
 
-      // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
-      if (!apiKey) {
-        throw new Error("Google API key is not configured")
+      // Use OpenAI API key from environment
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey || apiKey.includes("your_openai_api_key_here")) {
+        throw new Error("OpenAI API key is not configured")
       }
 
-      // Initialize the Google Generative AI with API key
-      const genAI = new GoogleGenerativeAI(apiKey)
-
-      // Use gemini-1.5-flash for better quota efficiency
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
-      // Generate content using the provided prompt directly
-      const result = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.2, // Lower temperature for efficiency
-          maxOutputTokens: 512, // Reduced token limit to save quota
-        },
+      // Initialize OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey,
       })
 
-      const response = result.response
-      const text = response.text()
+      // Generate content using GPT-3.5 Turbo with the provided prompt directly
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2, // Lower temperature for efficiency
+        max_tokens: 512, // Reduced token limit to save quota
+      })
+
+      const text = completion.choices[0]?.message?.content
 
       if (!text) {
         throw new Error("No response received from the AI model")
@@ -838,7 +835,7 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
 
       // Increment quota usage on success
       aiQuotaUsed++
-      console.log(`✅ AI analysis successful (${aiQuotaUsed}/${DAILY_QUOTA_LIMIT} quota used)`)
+      console.log(`✅ GPT-3.5 Turbo analysis successful (${aiQuotaUsed}/${DAILY_QUOTA_LIMIT} quota used)`)
       return text
       
     } catch (error) {
@@ -854,8 +851,8 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
 
       // Handle specific quota errors with retry logic
       if (error instanceof Error) {
-        if (error.message.includes("429") || error.message.includes("quota")) {
-          console.log(`⏳ Quota exceeded, waiting before retry ${attempt}/${maxRetries}`)
+        if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate_limit")) {
+          console.log(`⏳ Rate limit exceeded, waiting before retry ${attempt}/${maxRetries}`)
 
           if (attempt < maxRetries) {
             // Exponential backoff: 15s, 30s, 60s
@@ -865,20 +862,20 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
             continue
           } else {
             throw new Error(
-              "API quota exceeded. Please wait a few minutes before trying again, or consider upgrading your Google AI API plan for higher limits.",
+              "OpenAI API quota exceeded. Please wait a few minutes before trying again, or consider upgrading your OpenAI API plan for higher limits.",
             )
           }
         }
 
-        if (error.message.includes("API_KEY_INVALID") || error.message.includes("API key not valid")) {
+        if (error.message.includes("401") || error.message.includes("invalid_api_key") || error.message.includes("Incorrect API key")) {
           throw new Error(
-            "Invalid Google API key. Please check that your API key is correct and has the necessary permissions for the Generative Language API.",
+            "Invalid OpenAI API key. Please check that your API key is correct and active.",
           )
         }
 
-        if (error.message.includes("permission")) {
+        if (error.message.includes("insufficient_quota")) {
           throw new Error(
-            "API key doesn't have permission to access the Generative Language API. Please enable the API in Google Cloud Console.",
+            "OpenAI API quota exceeded. Please check your billing and usage limits in your OpenAI dashboard.",
           )
         }
       }
@@ -896,7 +893,7 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
   return generateFallbackResponse(prompt)
 }
 
-// Chat with Gemini AI (with quota management)
+// Chat with GPT-3.5 Turbo (with quota management)
 export async function chatWithAI(messages: Message[]): Promise<string> {
   // Check quota first
   if (!canMakeAICall()) {
@@ -908,70 +905,58 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`💬 Chat attempt ${attempt}/${maxRetries}`)
+      console.log(`💬 GPT-3.5 Turbo Chat attempt ${attempt}/${maxRetries}`)
 
-      // Use environment variable or fallback
-      const apiKey = process.env.GOOGLE_AI_API_KEY || "your_google_api_key_here"
-      if (!apiKey) {
-        throw new Error("Google API key is not configured")
+      // Use OpenAI API key from environment
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey || apiKey.includes("your_openai_api_key_here")) {
+        throw new Error("OpenAI API key is not configured")
       }
 
-      // Initialize the Google Generative AI with API key
-      const genAI = new GoogleGenerativeAI(apiKey)
-
-      // Use gemini-1.5-flash for chat as well
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
-      // Create a chat session
-      const chat = model.startChat({
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        },
-        // Add medical assistant context as the first message
-        history: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: "You are a helpful medical assistant AI. You provide informative responses about medical topics but always clarify that you're not providing medical diagnosis and encourage users to seek professional medical advice. Be thorough but cautious in your assessments, and always prioritize patient safety.",
-              },
-            ],
-          },
-          {
-            role: "model",
-            parts: [
-              {
-                text: "I understand my role as a helpful medical assistant AI. I'll provide informative responses about medical topics while clarifying that I'm not providing medical diagnosis and encouraging users to seek professional medical advice. I'll be thorough but cautious in my assessments and always prioritize patient safety.",
-              },
-            ],
-          },
-        ],
+      // Initialize OpenAI client
+      const openai = new OpenAI({
+        apiKey: apiKey,
       })
 
-      // Format user messages for the API
-      for (const msg of messages) {
-        await chat.sendMessage(msg.content)
+      // Format messages for OpenAI Chat API
+      const chatMessages = [
+        {
+          role: "system" as const,
+          content: "You are a helpful medical assistant AI. You provide informative responses about medical topics but always clarify that you're not providing medical diagnosis and encourage users to seek professional medical advice. Be thorough but cautious in your assessments, and always prioritize patient safety."
+        },
+        ...messages.map(msg => ({
+          role: msg.role === "user" ? "user" as const : "assistant" as const,
+          content: msg.content
+        }))
+      ]
+
+      // Generate response using GPT-3.5 Turbo
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: chatMessages,
+        temperature: 0.3,
+        max_tokens: 1024,
+      })
+
+      const response = completion.choices[0]?.message?.content
+
+      if (!response) {
+        throw new Error("No response received from GPT-3.5 Turbo")
       }
 
-      // Get the last response
-      const lastResponse = await chat.getHistory()
-      const lastModelResponse = lastResponse[lastResponse.length - 1]
-
-      if (lastModelResponse.role === "model" && lastModelResponse.parts[0]?.text) {
-        console.log("✅ Chat successful on attempt", attempt)
-        return lastModelResponse.parts[0].text
-      }
-
-      throw new Error("Failed to get a valid response from the model")
+      // Increment quota usage on success
+      aiQuotaUsed++
+      console.log(`✅ GPT-3.5 Turbo chat successful (${aiQuotaUsed}/${DAILY_QUOTA_LIMIT} quota used)`)
+      return response
+      
     } catch (error) {
-      console.error(`❌ Chat attempt ${attempt} failed:`, error)
+      console.error(`❌ GPT-3.5 Turbo chat attempt ${attempt} failed:`, error)
       lastError = error as Error
 
       // Handle quota errors with retry
-      if (error instanceof Error && (error.message.includes("429") || error.message.includes("quota"))) {
+      if (error instanceof Error && (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate_limit"))) {
         if (attempt < maxRetries) {
-          console.log(`⏳ Chat quota exceeded, waiting before retry...`)
+          console.log(`⏳ Chat rate limit exceeded, waiting before retry...`)
           await sleep(10000) // Wait 10 seconds for chat
           continue
         } else {
@@ -979,15 +964,15 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
         }
       }
 
-      // Handle other specific errors
+      // Handle other specific OpenAI errors
       if (error instanceof Error) {
-        if (error.message.includes("API_KEY_INVALID") || error.message.includes("API key not valid")) {
+        if (error.message.includes("401") || error.message.includes("invalid_api_key") || error.message.includes("Incorrect API key")) {
           throw new Error(
-            "Invalid Google API key. Please check that your API key is correct and has the necessary permissions.",
+            "Invalid OpenAI API key. Please check that your API key is correct and active.",
           )
         }
-        if (error.message.includes("permission")) {
-          throw new Error("API key doesn't have permission to access the Generative Language API.")
+        if (error.message.includes("insufficient_quota")) {
+          throw new Error("OpenAI API quota exceeded. Please check your billing and usage limits.")
         }
       }
 
@@ -1059,19 +1044,19 @@ CRITICAL THRESHOLDS:
 - Unconscious (GCS <9) = Level 1
 - Severe pain (8-10/10) with vital changes = Level 2
 
-Provide: WHO_LEVEL:[1-5] WHO_CODE:[RED/ORANGE/YELLOW/GREEN/BLUE] PRIORITY:[immediate/urgent/semi-urgent/less-urgent/non-urgent] WAIT:[minutes] FLAGS:[clinical warnings]`
+Provide: WHO_LEVEL:[1-5] WHO_CODE:[RED/ORANGE/YELLOW/GREEN/BLUE] PRIORITY:[immediate/emergency/urgent/semi-urgent/non-urgent] WAIT:[minutes] FLAGS:[clinical warnings]`
 
     const aiResponse = await analyzeSymptomsWithAI(triagePrompt)
     
     // Parse WHO-compliant AI response  
     const whoLevelMatch = aiResponse.match(/WHO_LEVEL:\s*(\d)/i)
     const whoCodeMatch = aiResponse.match(/WHO_CODE:\s*(RED|ORANGE|YELLOW|GREEN|BLUE)/i)
-    const priorityMatch = aiResponse.match(/PRIORITY:\s*(immediate|urgent|semi-urgent|less-urgent|non-urgent)/i)
+    const priorityMatch = aiResponse.match(/PRIORITY:\s*(immediate|emergency|urgent|semi-urgent|non-urgent)/i)
     const waitTimeMatch = aiResponse.match(/WAIT:\s*(\d+)/i)
     
     const urgencyLevel = whoLevelMatch ? parseInt(whoLevelMatch[1]) as 1|2|3|4|5 : 3
     const whoCode = whoCodeMatch ? whoCodeMatch[1].toUpperCase() as 'RED'|'ORANGE'|'YELLOW'|'GREEN'|'BLUE' : 'YELLOW'
-    const priority = priorityMatch ? priorityMatch[1].toLowerCase() as 'immediate'|'urgent'|'semi-urgent'|'less-urgent'|'non-urgent' : 'semi-urgent'
+    const priority = priorityMatch ? priorityMatch[1].toLowerCase() as 'immediate'|'emergency'|'urgent'|'semi-urgent'|'non-urgent' : 'urgent'
     const waitTime = waitTimeMatch ? parseInt(waitTimeMatch[1]) : 30
     
     // Extract warning flags (simplified)
@@ -1097,7 +1082,7 @@ Provide: WHO_LEVEL:[1-5] WHO_CODE:[RED/ORANGE/YELLOW/GREEN/BLUE] PRIORITY:[immed
       patientId: '',
       urgencyLevel: 3,
       estimatedWaitTime: 30,
-      priority: 'semi-urgent',
+      priority: 'urgent',
       aiRecommendation: 'WHO Level 3 (YELLOW) - Unable to complete AI triage. Manual WHO ETAT assessment required by trained medical professional.',
       warningFlags: ['AI Assessment Failed', 'Manual WHO Triage Required'],
       assessmentTime: new Date().toISOString(),
