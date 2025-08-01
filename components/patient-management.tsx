@@ -245,15 +245,18 @@ export function PatientManagement() {
 
   const formatDateShort = (dateString: string) => {
     try {
+      // Create date object from the string
       const date = new Date(dateString)
+      // Format with full month name and time
       return date.toLocaleDateString("en-US", {
-        month: "long",   // Show full month name
+        month: "long",   // Show full month name (e.g., "July" instead of "Jul")
         day: "numeric",
         year: "numeric",
         hour: "2-digit", // Add time display
         minute: "2-digit"
       })
     } catch (error) {
+      console.error("Error formatting date:", dateString, error)
       return dateString
     }
   }

@@ -137,17 +137,18 @@ const airtableHeaders = {
 
 // Helper function to format date for Airtable
 function formatDateForAirtable(): string {
-  // Force today's date (July 31, 2025) from the context
+  // Use actual current date (August 2, 2025)
   const now = new Date()
-  const year = "2025"
-  const month = "07" // July (07)
-  const day = "31"   // 31st day
+  const year = now.getFullYear().toString()
+  const month = String(now.getMonth() + 1).padStart(2, "0") // getMonth() returns 0-11, so add 1
+  const day = String(now.getDate()).padStart(2, "0")
   const hours = String(now.getHours()).padStart(2, "0")
   const minutes = String(now.getMinutes()).padStart(2, "0")
 
   // Create date in format YYYY-MM-DD HH:MM
-  console.log(`📆 Creating visit date with: ${year}-${month}-${day} ${hours}:${minutes}`)
-  return `${year}-${month}-${day} ${hours}:${minutes}`
+  const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`
+  console.log(`📆 Creating visit date with current time: ${formattedDate}`)
+  return formattedDate
 }
 
 // Sleep function for retry delays
@@ -566,8 +567,8 @@ function extractAllDiagnosisHeadings(geminiResponse: string): string {
   }
 }
 
-// Create new visit with AI diagnosis
-export async function createVisitWithDiagnosis(patientId: string, symptoms: string): Promise<Visit> {
+// Create new visit with AI diagnosis and optional doctor's diagnosis
+export async function createVisitWithDiagnosis(patientId: string, symptoms: string, doctorsDiagnosis?: string): Promise<Visit> {
   try {
     console.log("🏥 Creating visit for patient:", patientId, "with symptoms length:", symptoms.length)
 
@@ -617,12 +618,20 @@ IMPORTANT: Make sure to use **bold formatting** for all diagnosis names and numb
     }
     console.log("🔍 Date components verification:", dateComponents)
 
+    // Determine the final diagnosis for the "Doctors Diagnosis" field
+    const finalDoctorsDiagnosis = doctorsDiagnosis && doctorsDiagnosis.trim() 
+      ? doctorsDiagnosis.trim() 
+      : "Same as AI model"
+
+    console.log("👨‍⚕️ Doctor's diagnosis:", finalDoctorsDiagnosis)
+
     const requestBody = {
       fields: {
         "Linked Patient": [patientId],
         "Visit Date": visitDate,
         Symptoms: symptoms,
-        Diagnosis: allDiagnosisHeadings, // Store ALL diagnosis headings here
+        Diagnosis: allDiagnosisHeadings, // Store ALL AI diagnosis headings here
+        "Doctors Diagnosis": finalDoctorsDiagnosis, // Store doctor's diagnosis or "Same as AI model"
       },
     }
 
@@ -653,7 +662,7 @@ IMPORTANT: Make sure to use **bold formatting** for all diagnosis names and numb
       diagnosis: allDiagnosisHeadings, // Return ALL diagnosis headings
     }
 
-    console.log("🏥 Created visit with multiple diagnoses:", visit)
+    console.log("🏥 Created visit with AI and doctor's diagnoses:", visit)
     return visit
   } catch (error) {
     console.error("❌ Error creating visit:", error)
@@ -662,13 +671,25 @@ IMPORTANT: Make sure to use **bold formatting** for all diagnosis names and numb
 }
 
 // Alternative function to create visit with just date (no time) if datetime doesn't work
-export async function createVisitWithDateOnly(patientId: string, symptoms: string, diagnosis: string): Promise<Visit> {
+export async function createVisitWithDateOnly(patientId: string, symptoms: string, diagnosis: string, doctorsDiagnosis?: string): Promise<Visit> {
   try {
     console.log("🏥 Creating visit with date only for patient:", patientId)
 
-    // Force July 31, 2025 date
-    const visitDate = "2025-07-31" // Format as just date YYYY-MM-DD
-    console.log("📅 Date-only format (July 31, 2025):", visitDate)
+    // Use actual current date (August 2, 2025)
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, "0") // getMonth() returns 0-11, so add 1
+    const day = String(now.getDate()).padStart(2, "0")
+    const visitDate = `${year}-${month}-${day}` // Format as just date YYYY-MM-DD
+    
+    console.log("📅 Date-only format (current date):", visitDate)
+
+    // Determine the final diagnosis for the "Doctors Diagnosis" field
+    const finalDoctorsDiagnosis = doctorsDiagnosis && doctorsDiagnosis.trim() 
+      ? doctorsDiagnosis.trim() 
+      : "Same as AI model"
+
+    console.log("👨‍⚕️ Doctor's diagnosis:", finalDoctorsDiagnosis)
 
     const requestBody = {
       fields: {
@@ -676,6 +697,7 @@ export async function createVisitWithDateOnly(patientId: string, symptoms: strin
         "Visit Date": visitDate,
         Symptoms: symptoms,
         Diagnosis: diagnosis,
+        "Doctors Diagnosis": finalDoctorsDiagnosis, // Store doctor's diagnosis or "Same as AI model"
       },
     }
 
@@ -1357,10 +1379,14 @@ export async function getTodaysVisits(): Promise<Visit[]> {
     try {
       console.log(`📅 Fetching today's visits (attempt ${attempt}/${maxRetries})`)
 
-      // Force today as July 31, 2025
-      const todayString = "2025-07-31" // Format: YYYY-MM-DD
+      // Use actual current date (August 2, 2025)
+      const now = new Date()
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, "0") // getMonth() returns 0-11, so add 1
+      const day = String(now.getDate()).padStart(2, "0")
+      const todayString = `${year}-${month}-${day}` // Format: YYYY-MM-DD
       
-      console.log("🗓️ Looking for visits on (hard-coded July 31, 2025):", todayString)
+      console.log("🗓️ Looking for visits on (current date):", todayString)
 
       const url = new URL(`${AIRTABLE_API_URL}/Visits`)
       url.searchParams.append("maxRecords", "100")
@@ -1398,10 +1424,11 @@ export async function getTodaysVisits(): Promise<Visit[]> {
         }
       })
 
-      // Filter visits for July 31, 2025
+      // Filter visits for current date (August 2, 2025)
       const possibleDates = [
-        todayString, // July 31, 2025
-        "2025-08-01" // Include August 1, 2025 in case of timezone offset
+        todayString, // Current date (August 2, 2025)
+        // Also check tomorrow in case of timezone differences
+        `${year}-${month}-${String(now.getDate() + 1).padStart(2, "0")}`
       ]
       
       console.log("🔍 Checking for visits on dates:", possibleDates)

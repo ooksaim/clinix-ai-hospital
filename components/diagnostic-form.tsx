@@ -9,6 +9,9 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, AlertCircle, X, ImagePlus, Info, MessageSquare, Copy, Check, Microscope, Mic, MicOff, Volume2, Plus } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   analyzeSymptomsWithAI,
   createVisitWithDiagnosis,
@@ -51,6 +54,10 @@ export function DiagnosticForm({ selectedPatient, onVisitCreated }: DiagnosticFo
   const [extractedText, setExtractedText] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
   const [creatingVisit, setCreatingVisit] = useState(false)
+
+  // Doctor's diagnosis dialog states
+  const [showDoctorDialog, setShowDoctorDialog] = useState(false)
+  const [doctorsDiagnosis, setDoctorsDiagnosis] = useState("")
 
   // Initialize Tesseract worker
   const [worker, setWorker] = useState<any>(null)
@@ -560,33 +567,46 @@ IMPORTANT: Include a disclaimer that this is not professional medical advice and
       return
     }
 
+    // Show the doctor's diagnosis dialog
+    setShowDoctorDialog(true)
+  }
+
+  const handleConfirmSaveVisit = async () => {
+    if (!selectedPatient || !symptoms.trim() || !result) {
+      setError("Missing required data to save visit")
+      return
+    }
+
     try {
       setCreatingVisit(true)
       setError(null)
 
       console.log("💾 Saving visit to Airtable...")
+      console.log("👨‍⚕️ Doctor's diagnosis:", doctorsDiagnosis || "(empty - will use 'Same as AI model')")
 
       let newVisit: Visit
 
       try {
-        // Try with datetime format first
-        newVisit = await createVisitWithDiagnosis(selectedPatient.id, symptoms)
+        // Try with datetime format first - now with doctor's diagnosis
+        newVisit = await createVisitWithDiagnosis(selectedPatient.id, symptoms, doctorsDiagnosis)
       } catch (dateError: any) {
         console.log("⚠️ Datetime format failed, trying date-only format...")
 
         // Extract diagnosis from the current result
         const extractedDiagnosis = extractDiagnosis(result)
 
-        // Try with date-only format as fallback
-        newVisit = await createVisitWithDateOnly(selectedPatient.id, symptoms, extractedDiagnosis)
+        // Try with date-only format as fallback - now with doctor's diagnosis
+        newVisit = await createVisitWithDateOnly(selectedPatient.id, symptoms, extractedDiagnosis, doctorsDiagnosis)
       }
 
       console.log("✅ Visit saved successfully:", newVisit)
 
-      // Clear form
+      // Clear form and close dialog
       setSymptoms("")
       setResult(null)
       setExtractedText([])
+      setDoctorsDiagnosis("")
+      setShowDoctorDialog(false)
 
       // Notify parent component
       onVisitCreated(newVisit)
@@ -889,7 +909,7 @@ IMPORTANT: Include a disclaimer that this is not professional medical advice and
                       Saving Visit...
                     </>
                   ) : (
-                    "Save Visit to Patient Record"
+                    "Add Visit to Patient Record"
                   )}
                 </Button>
               </div>
@@ -915,6 +935,70 @@ IMPORTANT: Include a disclaimer that this is not professional medical advice and
           </Tabs>
         </Card>
       )}
+
+      {/* Doctor's Diagnosis Dialog */}
+      <Dialog open={showDoctorDialog} onOpenChange={setShowDoctorDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Diagnosis</DialogTitle>
+            <DialogDescription>
+              Please review the AI diagnosis and provide your professional assessment.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700">AI Model Diagnosis:</Label>
+              <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                {result ? extractDiagnosis(result) : "No diagnosis available"}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="doctorsDiagnosis" className="text-sm font-medium text-gray-700">
+                Your Professional Diagnosis (Optional):
+              </Label>
+              <Textarea
+                id="doctorsDiagnosis"
+                placeholder="Enter your diagnosis here, or leave empty to use 'Same as AI model'"
+                value={doctorsDiagnosis}
+                onChange={(e) => setDoctorsDiagnosis(e.target.value)}
+                className="mt-1"
+                rows={3}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                If left empty, "Same as AI model" will be recorded in the patient record.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowDoctorDialog(false)}
+              disabled={creatingVisit}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleConfirmSaveVisit}
+              disabled={creatingVisit}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {creatingVisit ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Visit...
+                </>
+              ) : (
+                "Save Visit to Record"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
