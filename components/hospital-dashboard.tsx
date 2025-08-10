@@ -24,7 +24,6 @@ import {
 } from "lucide-react"
 import type { Patient, Visit, TriageAssessment } from "@/app/actions"
 import { searchAllPatients, getTodaysVisits, getEmergencyPatients, getDashboardStats, detectEmergencyPatterns } from "@/app/actions"
-import { AIQuotaMonitor } from "./ai-quota-monitor"
 
 interface HospitalDashboardProps {
   patients?: Patient[]
@@ -418,11 +417,6 @@ export function HospitalDashboard({ patients = [], recentVisits = [], triageQueu
           </CardContent>
         </Card>
       )}
-
-      {/* AI Quota Monitor */}
-      <div className="mb-6">
-        <AIQuotaMonitor />
-      </div>
 
       {/* Emergency Patients Alert */}
       {emergencyPatients.length > 0 && (
