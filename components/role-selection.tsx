@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,9 +17,9 @@ import {
   Users,
   TrendingUp,
   Zap,
-  Settings
+  Settings,
+  Scan
 } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 interface Role {
   id: string
@@ -122,6 +123,24 @@ const roles: Role[] = [
       'Emergency Analytics'
     ],
     primaryAction: 'Emergency Center'
+  },
+  {
+    id: 'radiologist',
+    title: 'Radiologist',
+    subtitle: 'Medical Imaging & Reports',
+    icon: Scan,
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-50 border-teal-200',
+    description: 'AI-powered voice-to-report generation, medical imaging analysis, and rapid radiology reporting.',
+    features: [
+      'Rapid Report Generation',
+      'Voice-to-Text Transcription',
+      'AI Medical Report Formatting',
+      'CT/MRI/X-Ray Analysis',
+      'Professional Report Templates',
+      'Editable Report Output'
+    ],
+    primaryAction: 'Generate Reports'
   }
 ]
 
@@ -186,7 +205,7 @@ export function RoleSelection() {
             <div className="flex items-center gap-3">
               <Users className="h-8 w-8 text-green-600" />
               <div>
-                <p className="text-2xl font-bold text-gray-900">5</p>
+                <p className="text-2xl font-bold text-gray-900">6</p>
                 <p className="text-gray-600">Specialized Roles</p>
               </div>
             </div>
