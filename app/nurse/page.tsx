@@ -1,7 +1,6 @@
 "use client"
 
 import { AITriageSystem } from "@/components/ai-triage-system"
-import { PatientManagement } from "@/components/patient-management"
 import { EmergencyProtocolManager } from "@/components/emergency-protocol-manager"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
@@ -172,7 +171,7 @@ export default function NurseDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="triage" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border">
+          <TabsList className="grid w-full grid-cols-2 bg-white border">
             <TabsTrigger value="triage" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Patient Triage
@@ -180,10 +179,6 @@ export default function NurseDashboard() {
             <TabsTrigger value="emergency" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               Emergency Protocols
-            </TabsTrigger>
-            <TabsTrigger value="patients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Patient Records
             </TabsTrigger>
           </TabsList>
 
@@ -219,23 +214,6 @@ export default function NurseDashboard() {
               </CardHeader>
               <CardContent>
                 <EmergencyProtocolManager />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="patients" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Patient Information System
-                </CardTitle>
-                <CardDescription>
-                  Access patient records, vital signs, and care plans for nursing management
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PatientManagement />
               </CardContent>
             </Card>
           </TabsContent>

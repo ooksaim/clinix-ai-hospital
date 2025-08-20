@@ -1,15 +1,12 @@
 "use client"
 
 import { PatientManagement } from "@/components/patient-management"
-import { AITriageSystem } from "@/components/ai-triage-system"
-import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Stethoscope, Users, Brain, Activity, Calendar, FileText, ArrowLeft, LogOut } from "lucide-react"
+import { Stethoscope, Users, Activity, FileText, ArrowLeft, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { getDashboardStats } from "@/app/actions"
@@ -131,76 +128,21 @@ export default function DoctorDashboard() {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="patients" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border">
-            <TabsTrigger value="patients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Patient Management
-            </TabsTrigger>
-            <TabsTrigger value="diagnosis" className="flex items-center gap-2">
-              <Brain className="h-4 w-4" />
-              AI Diagnosis
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Clinical Analytics
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="patients" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Patient Management System
-                </CardTitle>
-                <CardDescription>
-                  Search, register, and manage patient records with full medical history
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PatientManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="diagnosis" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-purple-600" />
-                  AI-Powered Diagnosis & Triage
-                </CardTitle>
-                <CardDescription>
-                  Advanced AI analysis for symptom evaluation and treatment recommendations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AITriageSystem onTriageComplete={(assessment) => {
-                  console.log("Triage completed:", assessment)
-                }} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-green-600" />
-                  Clinical Analytics Dashboard
-                </CardTitle>
-                <CardDescription>
-                  Patient outcomes, treatment efficacy, and clinical performance metrics
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AnalyticsDashboard />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Main Content - Patient Management Only */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              Patient Management System
+            </CardTitle>
+            <CardDescription>
+              Search, register, and manage patient records with full medical history and treatment plans
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PatientManagement />
+          </CardContent>
+        </Card>
       </main>
 
       <Footer />

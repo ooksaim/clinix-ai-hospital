@@ -2,7 +2,6 @@
 
 import { EmergencyProtocolManager } from "@/components/emergency-protocol-manager"
 import { AITriageSystem } from "@/components/ai-triage-system"
-import { PatientManagement } from "@/components/patient-management"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -199,7 +198,7 @@ export default function EmergencyDashboard() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="protocols" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border">
+          <TabsList className="grid w-full grid-cols-2 bg-white border">
             <TabsTrigger value="protocols" className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               Emergency Protocols
@@ -207,10 +206,6 @@ export default function EmergencyDashboard() {
             <TabsTrigger value="triage" className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
               Rapid Triage
-            </TabsTrigger>
-            <TabsTrigger value="patients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Patient Tracking
             </TabsTrigger>
           </TabsList>
 
@@ -261,42 +256,6 @@ export default function EmergencyDashboard() {
                   console.log("Emergency triage completed:", assessment)
                   // In real implementation, this would trigger emergency protocols
                 }} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="patients" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Emergency Patient Tracking
-                </CardTitle>
-                <CardDescription>
-                  Real-time patient location, status updates, and critical care coordination
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                      <div className="text-2xl font-bold text-red-600">{criticalCases}</div>
-                      <p className="text-sm text-red-600">Critical Patients</p>
-                      <p className="text-xs text-red-500">Requires immediate care</p>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <div className="text-2xl font-bold text-yellow-600">{moderateCases}</div>
-                      <p className="text-sm text-yellow-600">Stable Patients</p>
-                      <p className="text-xs text-yellow-500">Monitoring required</p>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="text-2xl font-bold text-green-600">{Math.floor(stats.todaysVisits * 0.6)}</div>
-                      <p className="text-sm text-green-600">Treated & Released</p>
-                      <p className="text-xs text-green-500">Successful outcomes</p>
-                    </div>
-                  </div>
-                </div>
-                <PatientManagement />
               </CardContent>
             </Card>
           </TabsContent>

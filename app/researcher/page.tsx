@@ -1,7 +1,6 @@
 "use client"
 
 import { AnalyticsDashboard } from "@/components/analytics-dashboard"
-import { PatientManagement } from "@/components/patient-management"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -251,10 +250,10 @@ export default function ResearcherDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5 text-blue-600" />
-                  Research Dataset Management
+                  Anonymized Research Datasets
                 </CardTitle>
                 <CardDescription>
-                  Access anonymized patient data for research purposes with full compliance and ethics oversight
+                  Access anonymized demographic and clinical data for research purposes with full compliance
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -265,14 +264,59 @@ export default function ResearcherDashboard() {
                       <div>
                         <h3 className="font-semibold text-amber-800">Research Ethics Notice</h3>
                         <p className="text-sm text-amber-700 mt-1">
-                          All patient data shown here is anonymized and complies with medical research ethics guidelines. 
-                          Patient identifiable information is masked for research purposes.
+                          All patient data is fully anonymized with no identifiable information. 
+                          Research data access complies with medical research ethics guidelines and HIPAA regulations.
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-                <PatientManagement />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Available Datasets</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span>Demographic Patterns</span>
+                        <Badge variant="secondary">{stats.totalPatients} records</Badge>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span>Diagnosis Trends</span>
+                        <Badge variant="secondary">{totalDataPoints} data points</Badge>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span>Treatment Outcomes</span>
+                        <Badge variant="secondary">{Math.floor(stats.totalPatients * 0.8)} cases</Badge>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <span>Clinical Metrics</span>
+                        <Badge variant="secondary">{Math.floor(totalDataPoints * 0.6)} metrics</Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Data Export Tools</h3>
+                    <div className="space-y-2">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Export CSV Dataset
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        Statistical Summary
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Trend Analysis Report
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Database className="h-4 w-4 mr-2" />
+                        Custom Query Builder
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

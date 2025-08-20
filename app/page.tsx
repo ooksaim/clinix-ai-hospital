@@ -1,7 +1,7 @@
 "use client"
 
-import { RoleSelection } from "@/components/role-selection"
+import { RoleSelectionV2 } from "@/components/role-selection-v2"
 
 export default function Home() {
-  return <RoleSelection />
+  return <RoleSelectionV2 />
 }

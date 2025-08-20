@@ -3,20 +3,24 @@
 import { HospitalDashboard } from "@/components/hospital-dashboard"
 import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { PatientManagement } from "@/components/patient-management"
+import { AppointmentManagement } from "@/components/appointment-management"
+import { AIQuotaMonitor } from "@/components/ai-quota-monitor"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Settings, BarChart3, Users, DollarSign, Calendar, Building2, ArrowLeft, TrendingUp, LogOut } from "lucide-react"
+import { Settings, BarChart3, Users, DollarSign, Calendar, Building2, ArrowLeft, TrendingUp, LogOut, Shield } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { getDashboardStats } from "@/app/actions"
 import { useAuth } from "@/hooks/use-auth"
+import { usePermissions, PermissionGuard } from "@/hooks/use-permissions"
 
 export default function AdministratorDashboard() {
   const { user, isAuthenticated, isLoading, logout } = useAuth('administrator')
+  const permissions = usePermissions('admin')
   const [stats, setStats] = useState({
     totalPatients: 0,
     todaysVisits: 0,
@@ -88,6 +92,10 @@ export default function AdministratorDashboard() {
             <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
               <Building2 className="h-3 w-3 mr-1" />
               Admin {user?.username}
+            </Badge>
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Shield className="h-3 w-3 mr-1" />
+              Access Level: {permissions.roleLevel}
             </Badge>
             <Button 
               variant="outline" 
@@ -195,117 +203,157 @@ export default function AdministratorDashboard() {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white border">
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Analytics & Reports
-            </TabsTrigger>
-            <TabsTrigger value="patients" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Patient Database
-            </TabsTrigger>
-            <TabsTrigger value="operations" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              System Operations
-            </TabsTrigger>
+        {/* Main Content Tabs - Permission-Controlled */}
+        <Tabs defaultValue="operations" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-white border">
+            <PermissionGuard role="admin" permission="hospital_operations">
+              <TabsTrigger value="operations" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Hospital Operations
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard role="admin" permission="appointment_management">
+              <TabsTrigger value="appointments" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Appointments
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard role="admin" permission="performance_analytics">
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Operational Analytics
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard role="admin" permission="staff_management">
+              <TabsTrigger value="staff" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Staff Management
+              </TabsTrigger>
+            </PermissionGuard>
           </TabsList>
 
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-indigo-600" />
-                  Hospital Analytics Dashboard
-                </CardTitle>
-                <CardDescription>
-                  Comprehensive analytics for operational efficiency, financial performance, and patient outcomes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AnalyticsDashboard />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <PermissionGuard role="admin" permission="hospital_operations">
+            <TabsContent value="operations" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-gray-600" />
+                    Hospital Operations Center
+                  </CardTitle>
+                  <CardDescription>
+                    Hospital system management, resource allocation, and operational controls
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <HospitalDashboard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </PermissionGuard>
 
-          <TabsContent value="patients" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  Patient Database Management
-                </CardTitle>
-                <CardDescription>
-                  Complete patient records management with administrative oversight and reporting capabilities
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PatientManagement />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <PermissionGuard role="admin" permission="appointment_management">
+            <TabsContent value="appointments" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-green-600" />
+                    Appointment Management System
+                  </CardTitle>
+                  <CardDescription>
+                    Calendly integration for comprehensive appointment oversight and scheduling
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AppointmentManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </PermissionGuard>
 
-          <TabsContent value="operations" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5 text-gray-600" />
-                  System Operations Center
-                </CardTitle>
-                <CardDescription>
-                  Hospital-wide system management, resource allocation, and operational monitoring
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Resource Management</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>ICU Beds</span>
-                        <Badge variant="secondary">12/15 occupied</Badge>
+          <PermissionGuard role="admin" permission="performance_analytics">
+            <TabsContent value="analytics" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-indigo-600" />
+                    Operational Analytics Dashboard
+                  </CardTitle>
+                  <CardDescription>
+                    Hospital performance metrics, resource utilization, and operational efficiency analytics
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AnalyticsDashboard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </PermissionGuard>
+
+          <PermissionGuard role="admin" permission="staff_management">
+            <TabsContent value="staff" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    Staff Management System
+                  </CardTitle>
+                  <CardDescription>
+                    Manage hospital staff, schedules, assignments, and administrative oversight
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">Staff Overview</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Doctors on Duty</span>
+                          <Badge variant="secondary">12 active</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Nurses on Duty</span>
+                          <Badge variant="secondary">28 active</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Administrative Staff</span>
+                          <Badge variant="secondary">8 active</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Total Staff</span>
+                          <Badge variant="secondary">48 total</Badge>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Operating Rooms</span>
-                        <Badge variant="secondary">3/6 active</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Medical Staff</span>
-                        <Badge variant="secondary">45 on duty</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Equipment Status</span>
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">98% operational</Badge>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg">Resource Allocation</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>ICU Coverage</span>
+                          <Badge variant="secondary" className="bg-green-50 text-green-700">Adequate</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Emergency Coverage</span>
+                          <Badge variant="secondary" className="bg-green-50 text-green-700">Full</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Schedule Compliance</span>
+                          <Badge variant="secondary" className="bg-green-50 text-green-700">96%</Badge>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <span>Overtime Hours</span>
+                          <Badge variant="secondary" className="bg-yellow-50 text-yellow-700">12 hrs/week</Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">System Health</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>AI System</span>
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">Online</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Database</span>
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">Healthy</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Network</span>
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">Stable</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <span>Backup Status</span>
-                        <Badge variant="secondary" className="bg-green-50 text-green-700">Up to date</Badge>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </PermissionGuard>
         </Tabs>
       </main>
 
