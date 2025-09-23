@@ -6,8 +6,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// Force dynamic rendering
+// Force dynamic rendering - ensure no caching issues
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
 
     console.log('Fetching assigned patients for:', { doctorId, departmentId, date })
+    console.log('Environment:', process.env.NODE_ENV)
 
     // First, get all visits for today (excluding completed ones)
     let visitsQuery = supabase
@@ -39,6 +41,8 @@ export async function GET(request: NextRequest) {
       .not('visit_status', 'eq', 'completed')  // Exclude completed visits
       .order('checkin_time', { ascending: true })
 
+    console.log('Query filter: excluding completed visits for date:', date)
+
     // Filter by doctor if specified
     if (doctorId) {
       visitsQuery = visitsQuery.eq('assigned_doctor_id', doctorId)
@@ -60,7 +64,8 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Found visits:', visits?.length || 0)
+    console.log('Found visits (after filtering completed):', visits?.length || 0)
+    console.log('Visit statuses found:', visits?.map(v => v.visit_status))
 
     if (!visits || visits.length === 0) {
       return NextResponse.json({
