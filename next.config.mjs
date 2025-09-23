@@ -10,6 +10,9 @@ const nextConfig = {
     unoptimized: true,
   },
   
+  // Netlify-specific configuration
+  output: 'standalone',
+  
   // Performance optimizations
   experimental: {
     turbo: {
@@ -20,8 +23,8 @@ const nextConfig = {
   // Enable SWC minification for better performance
   swcMinify: true,
   
-  // Optimize webpack for development
-  webpack: (config, { dev }) => {
+  // Optimize webpack for development and production
+  webpack: (config, { dev, isServer }) => {
     if (dev) {
       config.watchOptions = {
         poll: 1000,
@@ -29,6 +32,17 @@ const nextConfig = {
         ignored: ['**/node_modules', '**/.next', '**/dist']
       }
     }
+    
+    // Netlify-specific optimizations
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      }
+    }
+    
     return config
   }
 }
