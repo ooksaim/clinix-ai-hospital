@@ -45,7 +45,8 @@ interface DoctorQueueProps {
 }
 
 export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation }: DoctorQueueProps) {
-  const [patients, setPatients] = useState<QueuePatient[]>([])
+  const [patients, setPatients] = useState<QueuePatient[]>([])  // All patients for tabs
+  const [queuePatients, setQueuePatients] = useState<QueuePatient[]>([])  // Active patients for main queue
   const [currentPatient, setCurrentPatient] = useState<QueuePatient | null>(null)
   const [loading, setLoading] = useState(true)
   const [callingPatient, setCallingPatient] = useState(false)
@@ -66,18 +67,21 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
       
       if (result.success) {
         // For doctor queue, use activePatients (non-completed) for the waiting queue
-        const queuePatients = result.data.activePatients || result.data.allPatients.filter(p => p.visitStatus !== 'completed')
-        console.log('📊 Queue patients (active only):', queuePatients)
-        setPatients(queuePatients)
+        const activePatients = result.data.activePatients || result.data.allPatients.filter((p: any) => p.visitStatus !== 'completed')
+        console.log('📊 Active patients (for queue):', activePatients)
+        setQueuePatients(activePatients)
         
         // Find current patient in consultation
-        const current = queuePatients.find((p: QueuePatient) => p.visitStatus === 'in_consultation')
+        const current = activePatients.find((p: QueuePatient) => p.visitStatus === 'in_consultation')
         console.log('📊 Current patient in consultation:', current)
         setCurrentPatient(current || null)
         
-        // FIXED: Use ALL patients for stats, not just queue patients
+        // FIXED: Use ALL patients for stats and tabs
         const allPatients = result.data.allPatients || []
         console.log('📊 All patients for doctor stats:', allPatients.length)
+        
+        // CRITICAL FIX: Set ALL patients for tabs to access completed patients
+        setPatients(allPatients)
         
         // Update stats using ALL patients (including completed)
         const newStats = {
@@ -371,7 +375,7 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
             {stats.waiting > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 mb-2">Next in Queue:</h4>
-                {patients
+                {queuePatients
                   .filter(p => p.visitStatus === 'waiting')
                   .sort((a, b) => (a.queuePosition || 0) - (b.queuePosition || 0))
                   .slice(0, 3)
