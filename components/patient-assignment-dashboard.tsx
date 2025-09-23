@@ -37,13 +37,22 @@ interface AssignedPatient {
   assignedDoctorId: string
   chiefComplaint: string
   symptoms?: string
-  visitStatus: 'waiting' | 'in_consultation' | 'completed'
+  visitStatus: 'waiting' | 'in_consultation' | 'completed' | 'admission_requested'
+  originalVisitStatus?: string
   priority: 'normal' | 'urgent' | 'emergency'
   visitType: string
   checkinTime: string
   tokenNumber?: string
   tokenStatus?: string
   queuePosition?: number
+  admissionInfo?: {
+    admissionStatus: string
+    requestedAt: string
+    approvedAt?: string
+    wardId?: string
+    bedId?: string
+    notes?: string
+  }
 }
 
 interface AssignmentData {
@@ -54,6 +63,7 @@ interface AssignmentData {
     totalPatients: number
     waitingPatients: number
     inConsultationPatients: number
+    admissionRequestedPatients: number
     completedPatients: number
     departmentCount: number
     doctorCount: number
@@ -98,7 +108,7 @@ export function PatientAssignmentDashboard() {
     }
   }, [autoRefresh])
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, admissionInfo?: any) => {
     switch (status) {
       case 'waiting':
         return <Badge variant="outline" className="text-yellow-600 border-yellow-300">Waiting</Badge>
@@ -106,6 +116,20 @@ export function PatientAssignmentDashboard() {
         return <Badge variant="outline" className="text-blue-600 border-blue-300">In Consultation</Badge>
       case 'completed':
         return <Badge variant="outline" className="text-green-600 border-green-300">Completed</Badge>
+      case 'admission_requested':
+        if (admissionInfo) {
+          switch (admissionInfo.admissionStatus) {
+            case 'pending':
+              return <Badge className="bg-orange-500 text-white">Admission Pending</Badge>
+            case 'approved':
+              return <Badge className="bg-purple-500 text-white">Admission Approved</Badge>
+            case 'rejected':
+              return <Badge className="bg-red-500 text-white">Admission Rejected</Badge>
+            default:
+              return <Badge className="bg-orange-500 text-white">Admission Requested</Badge>
+          }
+        }
+        return <Badge className="bg-orange-500 text-white">Admission Requested</Badge>
       default:
         return <Badge variant="outline">Unknown</Badge>
     }
@@ -187,7 +211,7 @@ export function PatientAssignmentDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
@@ -219,6 +243,18 @@ export function PatientAssignmentDashboard() {
               <div>
                 <p className="text-sm text-gray-600">In Consultation</p>
                 <p className="text-2xl font-bold">{data?.stats.inConsultationPatients || 0}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Building className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-sm text-gray-600">Admission Requests</p>
+                <p className="text-2xl font-bold">{data?.stats.admissionRequestedPatients || 0}</p>
               </div>
             </div>
           </CardContent>
@@ -265,6 +301,7 @@ export function PatientAssignmentDashboard() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="waiting">Waiting</SelectItem>
                 <SelectItem value="in_consultation">In Consultation</SelectItem>
+                <SelectItem value="admission_requested">Admission Requested</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>

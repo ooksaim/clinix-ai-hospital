@@ -69,13 +69,26 @@ export async function GET(request: NextRequest) {
     console.log('Visit statuses found:', allVisits?.map(v => v.visit_status))
     console.log('Doctor filter applied:', doctorId ? 'Yes' : 'No')
     console.log('Department filter applied:', departmentId ? 'Yes' : 'No')
+    
+    // Log all doctor IDs in the results to debug the mismatch
+    console.log('Doctor IDs in visits:', [...new Set(allVisits?.map(v => v.assigned_doctor_id))])
+    console.log('Requested doctor ID:', doctorId)
 
     // Now separate completed vs non-completed visits
-    const activeVisits = allVisits?.filter(visit => visit.visit_status !== 'completed') || []
-    const completedVisits = allVisits?.filter(visit => visit.visit_status === 'completed') || []
+    // Include "admission_requested" as active status
+    const activeVisits = allVisits?.filter(visit => 
+      visit.visit_status !== 'completed' && 
+      visit.visit_status !== 'discharged'
+    ) || []
+    const completedVisits = allVisits?.filter(visit => 
+      visit.visit_status === 'completed' || 
+      visit.visit_status === 'discharged'
+    ) || []
     
     console.log('Active visits (non-completed):', activeVisits.length)
     console.log('Completed visits:', completedVisits.length)
+    console.log('Active visit statuses:', activeVisits.map(v => v.visit_status))
+    console.log('Completed visit statuses:', completedVisits.map(v => v.visit_status))
 
     if (!allVisits || allVisits.length === 0) {
       return NextResponse.json({
@@ -140,6 +153,31 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching tokens:', tokensError)
     }
 
+    // Get admission details for visits with admission_requested status
+    const admissionRequestedVisits = allVisits?.filter(v => v.visit_status === 'admission_requested') || []
+    let admissions: any[] = []
+    if (admissionRequestedVisits.length > 0) {
+      const { data: admissionData, error: admissionsError } = await supabase
+        .from('admissions')
+        .select(`
+          id,
+          visit_id,
+          admission_status,
+          requested_at,
+          approved_at,
+          ward_id,
+          bed_id,
+          admission_notes
+        `)
+        .in('visit_id', admissionRequestedVisits.map(v => v.id))
+
+      if (admissionsError) {
+        console.error('Error fetching admissions:', admissionsError)
+      } else {
+        admissions = admissionData || []
+      }
+    }
+
     // Transform data for easy consumption
     // For the main patient list, only show ACTIVE (non-completed) visits
     const assignedPatients = activeVisits.map(visit => {
@@ -180,6 +218,23 @@ export async function GET(request: NextRequest) {
       const department = departments?.find(d => d.id === visit.department_id)
       const doctor = doctors?.find(d => d.id === visit.assigned_doctor_id)
       const token = tokens?.find(t => t.visit_id === visit.id)
+      const admission = admissions?.find(a => a.visit_id === visit.id)
+
+      // Enhanced status display for receptionist
+      let displayStatus = visit.visit_status || 'waiting'
+      let admissionInfo = null
+
+      if (visit.visit_status === 'admission_requested' && admission) {
+        displayStatus = 'admission_requested'
+        admissionInfo = {
+          admissionStatus: admission.admission_status,
+          requestedAt: admission.requested_at,
+          approvedAt: admission.approved_at,
+          wardId: admission.ward_id,
+          bedId: admission.bed_id,
+          notes: admission.admission_notes
+        }
+      }
 
       return {
         visitId: visit.id,
@@ -197,13 +252,16 @@ export async function GET(request: NextRequest) {
         assignedDoctorId: visit.assigned_doctor_id,
         chiefComplaint: visit.chief_complaint,
         symptoms: visit.symptoms,
-        visitStatus: visit.visit_status || 'waiting',
+        visitStatus: displayStatus,
+        originalVisitStatus: visit.visit_status,
         priority: visit.priority || 'normal',
         visitType: visit.visit_type,
         checkinTime: visit.checkin_time,
         tokenNumber: token?.token_number,
         tokenStatus: token?.token_status,
-        queuePosition: token?.token_number
+        queuePosition: token?.token_number,
+        // Admission workflow info for receptionist
+        admissionInfo: admissionInfo
       }
     })
 
@@ -242,10 +300,11 @@ export async function GET(request: NextRequest) {
         byDepartment,
         byDoctor,
         stats: {
-          totalPatients: allPatientsData.length, // Total includes completed
+          totalPatients: allPatientsData.length,
           waitingPatients: allPatientsData.filter(p => p.visitStatus === 'waiting').length,
           inConsultationPatients: allPatientsData.filter(p => p.visitStatus === 'in_consultation').length,
-          completedPatients: allPatientsData.filter(p => p.visitStatus === 'completed').length,
+          admissionRequestedPatients: allPatientsData.filter(p => p.visitStatus === 'admission_requested').length,
+          completedPatients: allPatientsData.filter(p => p.visitStatus === 'completed' || p.visitStatus === 'discharged').length,
           departmentCount: Object.keys(byDepartment).length,
           doctorCount: Object.keys(byDoctor).length
         }
