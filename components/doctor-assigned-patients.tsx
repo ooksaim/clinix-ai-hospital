@@ -56,12 +56,23 @@ export function DoctorAssignedPatients({ doctorId }: DoctorAssignedPatientsProps
       const response = await fetch(`/api/patients/assigned?doctor_id=${doctorId}`)
       const result = await response.json()
       
+      console.log('🩺 Doctor Assigned Patients API Response:', result)
+      
       if (result.success) {
         const assignedPatients = result.data.allPatients
+        console.log('🩺 All patients for doctor:', assignedPatients)
+        console.log('🩺 Patient statuses:', assignedPatients.map(p => p.visitStatus))
         setPatients(assignedPatients)
         
         // Calculate stats
         setStats({
+          total: assignedPatients.length,
+          waiting: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'waiting').length,
+          inConsultation: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'in_consultation').length,
+          completed: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'completed').length
+        })
+        
+        console.log('🩺 Calculated stats:', {
           total: assignedPatients.length,
           waiting: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'waiting').length,
           inConsultation: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'in_consultation').length,

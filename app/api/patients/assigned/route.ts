@@ -45,11 +45,13 @@ export async function GET(request: NextRequest) {
     // Filter by doctor if specified
     if (doctorId) {
       allVisitsQuery = allVisitsQuery.eq('assigned_doctor_id', doctorId)
+      console.log('🩺 Filtering by doctor ID:', doctorId)
     }
 
     // Filter by department if specified  
     if (departmentId) {
       allVisitsQuery = allVisitsQuery.eq('department_id', departmentId)
+      console.log('🏥 Filtering by department ID:', departmentId)
     }
 
     const { data: allVisits, error: visitsError } = await allVisitsQuery
@@ -65,6 +67,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Found ALL visits:', allVisits?.length || 0)
     console.log('Visit statuses found:', allVisits?.map(v => v.visit_status))
+    console.log('Doctor filter applied:', doctorId ? 'Yes' : 'No')
+    console.log('Department filter applied:', departmentId ? 'Yes' : 'No')
 
     // Now separate completed vs non-completed visits
     const activeVisits = allVisits?.filter(visit => visit.visit_status !== 'completed') || []
