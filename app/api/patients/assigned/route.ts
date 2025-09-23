@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching assigned patients for:', { doctorId, departmentId, date })
 
-    // First, get all visits for today
+    // First, get all visits for today (excluding completed ones)
     let visitsQuery = supabase
       .from('visits')
       .select(`
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         checkin_time
       `)
       .eq('visit_date', date)
+      .not('visit_status', 'eq', 'completed')  // Exclude completed visits
       .order('checkin_time', { ascending: true })
 
     // Filter by doctor if specified
