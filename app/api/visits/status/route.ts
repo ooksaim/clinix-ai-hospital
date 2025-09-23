@@ -7,6 +7,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function PUT(request: Request) {
   try {
     const { visitId, status } = await request.json()
