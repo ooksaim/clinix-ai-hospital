@@ -75,14 +75,18 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
         console.log('📊 Current patient in consultation:', current)
         setCurrentPatient(current || null)
         
-        // Update stats
+        // FIXED: Use ALL patients for stats, not just queue patients
+        const allPatients = result.data.allPatients || []
+        console.log('📊 All patients for doctor stats:', allPatients.length)
+        
+        // Update stats using ALL patients (including completed)
         const newStats = {
-          total: queuePatients.length,
-          waiting: queuePatients.filter((p: QueuePatient) => p.visitStatus === 'waiting').length,
-          inConsultation: queuePatients.filter((p: QueuePatient) => p.visitStatus === 'in_consultation').length,
-          completed: queuePatients.filter((p: QueuePatient) => p.visitStatus === 'completed').length
+          total: allPatients.length,
+          waiting: allPatients.filter((p: any) => p.visitStatus === 'waiting' || p.visitStatus === 'admission_requested').length,
+          inConsultation: allPatients.filter((p: any) => p.visitStatus === 'in_consultation').length,
+          completed: allPatients.filter((p: any) => p.visitStatus === 'completed').length
         }
-        console.log('📊 Stats updated:', newStats)
+        console.log('📊 Stats updated (with completed):', newStats)
         setStats(newStats)
       } else {
         console.error('❌ Failed to fetch queue:', result.error)
