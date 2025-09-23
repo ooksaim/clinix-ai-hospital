@@ -32,6 +32,11 @@ export type Permission =
   | 'financial_reports'
   | 'system_logs'
   
+  // Ward Management Features (New)
+  | 'admission_management'
+  | 'bed_management'
+  | 'ward_coordination'
+  
   // Analytics & Research Features
   | 'patient_demographics'
   | 'diagnosis_patterns'
@@ -56,7 +61,7 @@ export type Permission =
   | 'view_department_patients'
   | 'edit_department_patients'
 
-export type Role = 'doctor' | 'nurse' | 'admin' | 'researcher' | 'emergency' | 'radiologist'
+export type Role = 'doctor' | 'nurse' | 'admin' | 'researcher' | 'emergency' | 'radiologist' | 'ward_admin'
 
 // Define what each role can access
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -128,6 +133,17 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'medical_imaging',
     'voice_documentation',
   ],
+
+  // Ward Admin: ONLY ward management and admissions - NO patient clinical data
+  ward_admin: [
+    'hospital_operations',
+    'resource_allocation',
+    'admission_management',
+    'bed_management',
+    'ward_coordination',
+    'view_department_patients', // Can see patient names for bed assignment
+    'staff_management', // Limited to ward staff
+  ],
 }
 
 // Feature visibility configuration
@@ -152,6 +168,7 @@ export const FEATURE_CONFIG = {
     researcher: ['analytics', 'demographics', 'patterns', 'reports'], // ONLY research features
     emergency: ['emergency', 'triage', 'coordination', 'alerts'], // NO patient management
     radiologist: ['reports', 'imaging', 'voice-to-text', 'templates'], // ONLY radiology features
+    ward_admin: ['admissions', 'beds', 'wards', 'capacity'], // ONLY ward management
   }
 }
 
@@ -195,6 +212,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
   emergency: 4,    // Can override in crisis situations  
   doctor: 3,       // Medical authority
   nurse: 2,        // Clinical support
+  ward_admin: 2,   // Ward management authority
   radiologist: 2,  // Specialized but limited scope
   researcher: 1,   // Lowest access (view only)
 }

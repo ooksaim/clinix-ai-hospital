@@ -38,12 +38,19 @@ export function LoginForm({ role, roleTitle, roleIcon, roleColor, onLogin }: Log
     try {
       const success = await onLogin(username, password)
       if (success) {
-        // Store authentication in sessionStorage for prototype
-        sessionStorage.setItem(`clinix-auth-${role}`, JSON.stringify({
+        // Store authentication in both sessionStorage and localStorage for compatibility
+        const userData = {
           username,
           role,
-          timestamp: Date.now()
-        }))
+          timestamp: Date.now(),
+          // Add additional fields expected by doctor dashboard
+          id: role === 'doctor' ? 'DOC001' : 'USER001',
+          first_name: username === 'admin' ? 'Dr. John' : 'Admin',
+          last_name: username === 'admin' ? 'Smith' : 'User'
+        }
+        
+        sessionStorage.setItem(`clinix-auth-${role}`, JSON.stringify(userData))
+        localStorage.setItem('user', JSON.stringify(userData)) // For backward compatibility
         router.push(`/${role}`)
       } else {
         setError("Invalid credentials. Please try again.")

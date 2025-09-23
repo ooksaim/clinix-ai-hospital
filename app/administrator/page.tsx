@@ -5,13 +5,14 @@ import { AnalyticsDashboard } from "@/components/analytics-dashboard"
 import { PatientManagement } from "@/components/patient-management"
 import { AppointmentManagement } from "@/components/appointment-management"
 import { AIQuotaMonitor } from "@/components/ai-quota-monitor"
+import { PatientAssignmentDashboard } from "@/components/patient-assignment-dashboard"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Settings, BarChart3, Users, DollarSign, Calendar, Building2, ArrowLeft, TrendingUp, LogOut, Shield } from "lucide-react"
+import { Settings, BarChart3, Users, DollarSign, Calendar, Building2, ArrowLeft, TrendingUp, LogOut, Shield, UserCheck } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { getDashboardStats } from "@/app/actions"
@@ -205,11 +206,18 @@ export default function AdministratorDashboard() {
 
         {/* Main Content Tabs - Permission-Controlled */}
         <Tabs defaultValue="operations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white border">
+          <TabsList className="grid w-full grid-cols-5 bg-white border">
             <PermissionGuard role="admin" permission="hospital_operations">
               <TabsTrigger value="operations" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Hospital Operations
+              </TabsTrigger>
+            </PermissionGuard>
+            
+            <PermissionGuard role="admin" permission="hospital_operations">
+              <TabsTrigger value="assignments" className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                Patient Assignments
               </TabsTrigger>
             </PermissionGuard>
             
@@ -249,6 +257,25 @@ export default function AdministratorDashboard() {
                 </CardHeader>
                 <CardContent>
                   <HospitalDashboard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </PermissionGuard>
+
+          <PermissionGuard role="admin" permission="hospital_operations">
+            <TabsContent value="assignments" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-blue-600" />
+                    Patient Assignment Dashboard
+                  </CardTitle>
+                  <CardDescription>
+                    Real-time view of patient assignments to doctors by department with load balancing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PatientAssignmentDashboard />
                 </CardContent>
               </Card>
             </TabsContent>

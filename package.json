@@ -6,12 +6,14 @@
   "author": "Clinix Team",
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "next dev --turbo",
+    "dev:fast": "NODE_OPTIONS=\"--max-old-space-size=2048\" next dev --turbo",
     "lint": "next lint",
     "start": "next start",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@radix-ui/react-accordion": "^1.1.2",
@@ -41,8 +43,7 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-toggle-group": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "@google/generative-ai": "^0.21.0",
-    "openai": "^4.67.3",
+    "@supabase/supabase-js": "^2.57.4",
     "airtable": "^0.12.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
@@ -53,6 +54,7 @@
     "lucide-react": "^0.263.1",
     "next": "14.2.16",
     "next-themes": "^0.2.1",
+    "openai": "^4.67.3",
     "react": "^18.2.0",
     "react-day-picker": "^8.8.0",
     "react-dom": "^18.2.0",

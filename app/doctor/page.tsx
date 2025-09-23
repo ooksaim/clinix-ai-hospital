@@ -1,56 +1,91 @@
-"use client"
+﻿"use client"
 
-import { PatientManagement } from "@/components/patient-management"
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { PatientManagement } from "@/components/patient-management"
+import { DoctorAssignedPatients } from "@/components/doctor-assigned-patients"
+import { DoctorQueueDashboard } from "@/components/doctor-queue-dashboard"
+import { PatientConsultationInterface } from "@/components/patient-consultation-interface"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Stethoscope, Users, Activity, FileText, ArrowLeft, LogOut } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Stethoscope, Users, Activity, FileText, LogOut, ArrowLeft, Calendar, Clock } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
-import { getDashboardStats } from "@/app/actions"
-import { useAuth } from "@/hooks/use-auth"
 
 export default function DoctorDashboard() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth('doctor')
+  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [loadingAuth, setLoadingAuth] = useState(true)
+  const [consultationPatient, setConsultationPatient] = useState<any>(null)
   const [stats, setStats] = useState({
-    totalPatients: 0,
-    todaysVisits: 0,
-    emergencyQueue: 0,
-    lastUpdate: ""
+    todaysVisits: 12,
+    emergencyQueue: 3,
+    totalPatients: 247
   })
 
   useEffect(() => {
-    if (!isAuthenticated || isLoading) return
+    const storedUser = localStorage.getItem('user')
     
-    const fetchStats = async () => {
-      try {
-        const dashboardStats = await getDashboardStats()
-        setStats(dashboardStats)
-      } catch (error) {
-        console.error("Error fetching stats:", error)
+    if (!storedUser) {
+      router.push('/login')
+      return
+    }
+
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role !== 'doctor') {
+        router.push('/login')
+        return
       }
+      setCurrentUser(user)
+    } catch (error) {
+      localStorage.removeItem('user')
+      router.push('/login')
+      return
     }
     
-    fetchStats()
-    const interval = setInterval(fetchStats, 30000)
-    return () => clearInterval(interval)
-  }, [isAuthenticated, isLoading])
+    setLoadingAuth(false)
+  }, [router])
 
-  if (isLoading) {
+  const logout = () => {
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('clinix-auth-doctor')
+    router.push('/login')
+  }
+
+  const handleOpenConsultation = (patient: any) => {
+    console.log('🏥 Doctor page - handleOpenConsultation called!')
+    console.log('🏥 Patient data received:', patient)
+    console.log('🏥 Setting consultationPatient state...')
+    setConsultationPatient(patient)
+    console.log('🏥 consultationPatient state updated')
+  }
+
+  const handleCloseConsultation = () => {
+    setConsultationPatient(null)
+  }
+
+  const handleCompleteConsultation = (visitId: string) => {
+    // This will be handled by the consultation interface
+    setConsultationPatient(null)
+  }
+
+  if (loadingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading...</p>
         </div>
       </div>
     )
   }
 
-  if (!isAuthenticated) {
-    return null // The useAuth hook will redirect to login
+  if (!currentUser) {
+    return null
   }
 
   return (
@@ -58,7 +93,6 @@ export default function DoctorDashboard() {
       <Header />
       
       <main className="container mx-auto px-4 py-6 max-w-7xl">
-        {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -72,18 +106,18 @@ export default function DoctorDashboard() {
                 <Stethoscope className="h-8 w-8 text-blue-600" />
                 Doctor Dashboard
               </h1>
-              <p className="text-gray-600 mt-1">Clinical management and patient care tools</p>
+              <p className="text-gray-600 mt-1">OPD Queue & Consultation Management</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
               <Activity className="h-3 w-3 mr-1" />
-              Dr. {user?.username}
+              Dr. {currentUser.first_name} {currentUser.last_name}
             </Badge>
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={() => logout('doctor')}
+              onClick={logout}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <LogOut className="h-4 w-4 mr-2" />
@@ -92,58 +126,78 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Patients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todaysVisits}</div>
-              <p className="text-xs text-muted-foreground">Visits scheduled</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Emergency Queue</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.emergencyQueue}</div>
-              <p className="text-xs text-muted-foreground">Urgent cases</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Patients</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalPatients}</div>
-              <p className="text-xs text-muted-foreground">In database</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs defaultValue="queue" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="queue" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              My OPD Queue
+            </TabsTrigger>
+            <TabsTrigger value="assigned" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Assigned Patients
+            </TabsTrigger>
+            <TabsTrigger value="management" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Patient Management
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Main Content - Patient Management Only */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              Patient Management System
-            </CardTitle>
-            <CardDescription>
-              Search, register, and manage patient records with full medical history and treatment plans
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PatientManagement />
-          </CardContent>
-        </Card>
+          <TabsContent value="queue">
+            <DoctorQueueDashboard 
+              doctorId={currentUser?.id} 
+              doctorName={`${currentUser?.first_name} ${currentUser?.last_name}`}
+              onOpenConsultation={handleOpenConsultation}
+            />
+          </TabsContent>
+
+          <TabsContent value="assigned">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  My Assigned Patients
+                </CardTitle>
+                <CardDescription>
+                  View and manage patients assigned to you today
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DoctorAssignedPatients doctorId={currentUser?.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="management">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  Patient Management System
+                </CardTitle>
+                <CardDescription>
+                  Search, register, and manage patient records with full medical history
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PatientManagement />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* Consultation Interface Modal */}
+      {consultationPatient && (
+        <div>
+          <PatientConsultationInterface
+            patient={consultationPatient}
+            doctorId={currentUser?.id}
+            doctorName={`${currentUser?.first_name} ${currentUser?.last_name}`}
+            onClose={handleCloseConsultation}
+            onCompleteConsultation={handleCompleteConsultation}
+          />
+        </div>
+      )}
 
       <Footer />
     </div>
