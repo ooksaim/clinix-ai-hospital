@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     console.log('Fetching assigned patients for:', { doctorId, departmentId, date })
     console.log('Environment:', process.env.NODE_ENV)
 
-    // First, get all visits for today (excluding completed ones)
-    let visitsQuery = supabase
+    // First, get ALL visits for today (we'll filter later for different purposes)
+    let allVisitsQuery = supabase
       .from('visits')
       .select(`
         id,
@@ -38,22 +38,21 @@ export async function GET(request: NextRequest) {
         checkin_time
       `)
       .eq('visit_date', date)
-      .not('visit_status', 'eq', 'completed')  // Exclude completed visits
       .order('checkin_time', { ascending: true })
 
-    console.log('Query filter: excluding completed visits for date:', date)
+    console.log('Fetching ALL visits for date:', date)
 
     // Filter by doctor if specified
     if (doctorId) {
-      visitsQuery = visitsQuery.eq('assigned_doctor_id', doctorId)
+      allVisitsQuery = allVisitsQuery.eq('assigned_doctor_id', doctorId)
     }
 
     // Filter by department if specified  
     if (departmentId) {
-      visitsQuery = visitsQuery.eq('department_id', departmentId)
+      allVisitsQuery = allVisitsQuery.eq('department_id', departmentId)
     }
 
-    const { data: visits, error: visitsError } = await visitsQuery
+    const { data: allVisits, error: visitsError } = await allVisitsQuery
 
     if (visitsError) {
       console.error('Error fetching visits:', visitsError)
@@ -64,10 +63,17 @@ export async function GET(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Found visits (after filtering completed):', visits?.length || 0)
-    console.log('Visit statuses found:', visits?.map(v => v.visit_status))
+    console.log('Found ALL visits:', allVisits?.length || 0)
+    console.log('Visit statuses found:', allVisits?.map(v => v.visit_status))
 
-    if (!visits || visits.length === 0) {
+    // Now separate completed vs non-completed visits
+    const activeVisits = allVisits?.filter(visit => visit.visit_status !== 'completed') || []
+    const completedVisits = allVisits?.filter(visit => visit.visit_status === 'completed') || []
+    
+    console.log('Active visits (non-completed):', activeVisits.length)
+    console.log('Completed visits:', completedVisits.length)
+
+    if (!allVisits || allVisits.length === 0) {
       return NextResponse.json({
         success: true,
         data: {
@@ -86,8 +92,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get patient details
-    const patientIds = [...new Set(visits.map(v => v.patient_id))]
+    // Get patient details for ALL visits (including completed ones)
+    const patientIds = [...new Set(allVisits.map(v => v.patient_id))]
     const { data: patients, error: patientsError } = await supabase
       .from('patients')
       .select('id, patient_number, first_name, last_name, age, gender, phone, cnic')
@@ -98,7 +104,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get department details
-    const departmentIds = [...new Set(visits.map(v => v.department_id))]
+    const departmentIds = [...new Set(allVisits.map(v => v.department_id))]
     const { data: departments, error: departmentsError } = await supabase
       .from('departments')
       .select('id, name')
@@ -109,7 +115,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get doctor details
-    const doctorIds = [...new Set(visits.map(v => v.assigned_doctor_id).filter(Boolean))]
+    const doctorIds = [...new Set(allVisits.map(v => v.assigned_doctor_id).filter(Boolean))]
     const { data: doctors, error: doctorsError } = await supabase
       .from('user_profiles')
       .select('id, first_name, last_name, role')
@@ -120,7 +126,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get token details
-    const visitIds = visits.map(v => v.id)
+    const visitIds = allVisits.map(v => v.id)
     const { data: tokens, error: tokensError } = await supabase
       .from('tokens')
       .select('id, visit_id, token_number, token_status, issue_date')
@@ -131,7 +137,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data for easy consumption
-    const assignedPatients = visits.map(visit => {
+    // For the main patient list, only show ACTIVE (non-completed) visits
+    const assignedPatients = activeVisits.map(visit => {
+      const patient = patients?.find(p => p.id === visit.patient_id)
+      const department = departments?.find(d => d.id === visit.department_id)
+      const doctor = doctors?.find(d => d.id === visit.assigned_doctor_id)
+      const token = tokens?.find(t => t.visit_id === visit.id)
+
+      return {
+        visitId: visit.id,
+        visitNumber: visit.visit_number,
+        patientId: visit.patient_id,
+        patientNumber: patient?.patient_number || 'Unknown',
+        patientName: patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown Patient',
+        age: patient?.age || 0,
+        gender: patient?.gender || 'Unknown',
+        phone: patient?.phone,
+        cnic: patient?.cnic,
+        department: department?.name || 'Unknown Department',
+        departmentId: visit.department_id,
+        assignedDoctor: doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : 'Unassigned',
+        assignedDoctorId: visit.assigned_doctor_id,
+        chiefComplaint: visit.chief_complaint,
+        symptoms: visit.symptoms,
+        visitStatus: visit.visit_status || 'waiting',
+        priority: visit.priority || 'normal',
+        visitType: visit.visit_type,
+        checkinTime: visit.checkin_time,
+        tokenNumber: token?.token_number,
+        tokenStatus: token?.token_status,
+        queuePosition: token?.token_number
+      }
+    })
+
+    // For stats, use ALL visits to get accurate counts
+    const allPatientsData = allVisits.map(visit => {
       const patient = patients?.find(p => p.id === visit.patient_id)
       const department = departments?.find(d => d.id === visit.department_id)
       const doctor = doctors?.find(d => d.id === visit.assigned_doctor_id)
@@ -184,7 +224,8 @@ export async function GET(request: NextRequest) {
     }, {} as Record<string, typeof assignedPatients>)
 
     console.log('Processed assigned patients:', {
-      total: assignedPatients.length,
+      activePatients: assignedPatients.length,
+      totalPatientsToday: allPatientsData.length,
       departments: Object.keys(byDepartment).length,
       doctors: Object.keys(byDoctor).length
     })
@@ -192,14 +233,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        allPatients: assignedPatients,
+        allPatients: assignedPatients, // Only active (non-completed) patients for the queue
         byDepartment,
         byDoctor,
         stats: {
-          totalPatients: assignedPatients.length,
-          waitingPatients: assignedPatients.filter(p => p.visitStatus === 'waiting').length,
-          inConsultationPatients: assignedPatients.filter(p => p.visitStatus === 'in_consultation').length,
-          completedPatients: assignedPatients.filter(p => p.visitStatus === 'completed').length,
+          totalPatients: allPatientsData.length, // Total includes completed
+          waitingPatients: allPatientsData.filter(p => p.visitStatus === 'waiting').length,
+          inConsultationPatients: allPatientsData.filter(p => p.visitStatus === 'in_consultation').length,
+          completedPatients: allPatientsData.filter(p => p.visitStatus === 'completed').length,
           departmentCount: Object.keys(byDepartment).length,
           doctorCount: Object.keys(byDoctor).length
         }
