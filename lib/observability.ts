@@ -1,5 +1,6 @@
 // Lightweight observability helpers (no external deps)
 // Usage: const span = startApiSpan('assignedPatients'); ... finally span.end(res)
+// Last updated: 2025-09-23 for production debugging
 
 export interface ApiSpanMeta {
   name: string
