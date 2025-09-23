@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { startApiSpan, attachDiagHeaders } from '@/lib/observability'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -7,6 +8,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 export async function GET(request: NextRequest) {
+  const span = startApiSpan('admissions.requests')
   try {
     // Fetch admission requests with patient and doctor information
     const { data: requests, error: requestsError } = await supabase
@@ -70,25 +72,25 @@ export async function GET(request: NextRequest) {
       occupied_beds: ward.total_beds - ward.available_beds
     })) || []
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       data: {
         requests: requests || [],
         wards: wardsWithOccupancy
       }
-    }, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
     })
+    span.end(res)
+    const wrapped = attachDiagHeaders(res, span)
+    return new NextResponse(res.body, wrapped)
 
   } catch (error) {
     console.error('Server error:', error)
-    return NextResponse.json(
+    const res = NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     )
+    span.end(res)
+    const wrapped = attachDiagHeaders(res, span)
+    return new NextResponse(res.body, wrapped)
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { startApiSpan, attachDiagHeaders } from '@/lib/observability'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -11,6 +12,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: NextRequest) {
+  const span = startApiSpan('patients.assigned')
   try {
     const { searchParams } = new URL(request.url)
     const doctorId = searchParams.get('doctor_id')
@@ -301,7 +303,7 @@ export async function GET(request: NextRequest) {
       doctors: Object.keys(byDoctor).length
     })
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       data: {
         allPatients: allPatientsData, // Return ALL patients (including completed) for full dashboard view
@@ -318,19 +320,19 @@ export async function GET(request: NextRequest) {
           doctorCount: Object.keys(byDoctor).length
         }
       }
-    }, {
-      headers: {
-        'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
     })
+    span.end(res)
+    const wrapped = attachDiagHeaders(res, span)
+    return new NextResponse(res.body, wrapped)
 
   } catch (error) {
     console.error('Error in assigned patients API:', error)
-    return NextResponse.json({ 
+    const res = NextResponse.json({ 
       success: false, 
       error: 'Internal server error' 
     }, { status: 500 })
+    span.end(res)
+    const wrapped = attachDiagHeaders(res, span)
+    return new NextResponse(res.body, wrapped)
   }
 }
