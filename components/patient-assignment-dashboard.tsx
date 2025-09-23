@@ -103,7 +103,7 @@ export function PatientAssignmentDashboard() {
     fetchAssignedPatients()
     
     if (autoRefresh) {
-      const interval = setInterval(fetchAssignedPatients, 30000) // Refresh every 30 seconds
+      const interval = setInterval(fetchAssignedPatients, 5000) // FASTER: Refresh every 5 seconds for real-time feel
       return () => clearInterval(interval)
     }
   }, [autoRefresh])

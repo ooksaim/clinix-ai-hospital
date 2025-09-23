@@ -182,8 +182,8 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
   useEffect(() => {
     fetchQueue()
     
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchQueue, 30000)
+    // FASTER: Auto-refresh every 5 seconds for real-time updates in production
+    const interval = setInterval(fetchQueue, 5000)
     return () => clearInterval(interval)
   }, [doctorId])
 

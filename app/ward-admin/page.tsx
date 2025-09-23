@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Building, Users, Bed, Bell, CheckCircle, Clock, AlertTriangle, LogOut, ArrowLeft } from "lucide-react"
+import { Building, Users, Bed, Bell, CheckCircle, Clock, AlertTriangle, LogOut, ArrowLeft, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
 interface AdmissionRequest {
@@ -81,12 +81,31 @@ export default function WardAdminDashboard() {
     setLoadingAuth(false)
   }, [router])
 
-  const fetchAdmissionRequests = async () => {
+  const fetchAdmissionRequests = async (retryCount = 0) => {
     try {
-      const response = await fetch('/api/admissions/requests')
+      console.log('🏥 Fetching admission requests, attempt:', retryCount + 1)
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+      
+      const response = await fetch('/api/admissions/requests', {
+        signal: controller.signal,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const result = await response.json()
       
       if (result.success) {
+        console.log('✅ Successfully fetched admission requests:', result.data.requests.length)
         setAdmissionRequests(result.data.requests)
         setWardInfo(result.data.wards)
         
@@ -105,9 +124,31 @@ export default function WardAdminDashboard() {
           totalBeds,
           occupancyRate
         })
+      } else {
+        throw new Error(result.error || 'Failed to fetch admission requests')
       }
     } catch (error) {
-      console.error('Error fetching admission requests:', error)
+      console.error('❌ Error fetching admission requests:', error)
+      
+      // Retry logic for production stability
+      if (retryCount < 3 && (
+        error instanceof Error && (
+          error.message.includes('abort') ||
+          error.message.includes('fetch') ||
+          error.message.includes('network') ||
+          error.message.includes('timeout')
+        )
+      )) {
+        console.log(`🔄 Retrying in ${(retryCount + 1) * 2} seconds...`)
+        setTimeout(() => {
+          fetchAdmissionRequests(retryCount + 1)
+        }, (retryCount + 1) * 2000)
+      } else {
+        // Show user-friendly error after all retries failed
+        if (retryCount >= 3) {
+          alert('Unable to load admission requests. Please check your connection and refresh the page.')
+        }
+      }
     } finally {
       setLoading(false)
     }
@@ -115,17 +156,34 @@ export default function WardAdminDashboard() {
 
   const approveAdmission = async (admissionId: string) => {
     try {
+      console.log('🏥 Approving admission:', admissionId)
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout for approval
+      
       const response = await fetch(`/api/admissions/${admissionId}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved_by: currentUser.id })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify({ approved_by: currentUser.id }),
+        signal: controller.signal
       })
 
+      clearTimeout(timeoutId)
+
       if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Admission approved successfully:', result)
         alert('Admission approved successfully!')
-        fetchAdmissionRequests() // Refresh data
+        
+        // Immediate refresh to show updated status
+        await fetchAdmissionRequests()
       } else {
         const error = await response.json()
+        console.error('❌ Approval failed:', error)
         alert('Failed to approve admission: ' + error.error)
       }
     } catch (error) {
@@ -142,8 +200,8 @@ export default function WardAdminDashboard() {
     if (!loadingAuth && currentUser) {
       fetchAdmissionRequests()
       
-      // Auto-refresh every 10 seconds for real-time updates
-      const interval = setInterval(fetchAdmissionRequests, 10000)
+      // FASTER: Auto-refresh every 3 seconds for real-time admission updates
+      const interval = setInterval(fetchAdmissionRequests, 3000)
       return () => clearInterval(interval)
     }
   }, [loadingAuth, currentUser])
@@ -286,10 +344,26 @@ export default function WardAdminDashboard() {
           <TabsContent value="requests" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5 text-orange-600" />
-                  Pending Admission Requests
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-orange-600" />
+                    <CardTitle>Pending Admission Requests</CardTitle>
+                  </div>
+                  <Button 
+                    onClick={() => fetchAdmissionRequests()} 
+                    variant="outline" 
+                    size="sm"
+                    disabled={loading}
+                    className="flex items-center gap-2"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Refresh
+                  </Button>
+                </div>
                 <CardDescription>
                   Review and approve patient admissions
                 </CardDescription>

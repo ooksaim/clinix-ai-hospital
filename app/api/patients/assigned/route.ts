@@ -70,9 +70,18 @@ export async function GET(request: NextRequest) {
     console.log('Doctor filter applied:', doctorId ? 'Yes' : 'No')
     console.log('Department filter applied:', departmentId ? 'Yes' : 'No')
     
-    // Log all doctor IDs in the results to debug the mismatch
+    // CRITICAL DEBUG: Log all doctor IDs in the results to debug the mismatch
     console.log('Doctor IDs in visits:', [...new Set(allVisits?.map(v => v.assigned_doctor_id))])
     console.log('Requested doctor ID:', doctorId)
+    
+    // CRITICAL DEBUG: Check if any visits match the requested doctor
+    const doctorVisits = allVisits?.filter(v => v.assigned_doctor_id === doctorId) || []
+    console.log('Visits matching requested doctor:', doctorVisits.length)
+    console.log('Matching visit details:', doctorVisits.map(v => ({ 
+      id: v.id, 
+      status: v.visit_status, 
+      doctorId: v.assigned_doctor_id 
+    })))
 
     // Now separate completed vs non-completed visits
     // Include "admission_requested" as active status
@@ -308,6 +317,12 @@ export async function GET(request: NextRequest) {
           departmentCount: Object.keys(byDepartment).length,
           doctorCount: Object.keys(byDoctor).length
         }
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     })
 
