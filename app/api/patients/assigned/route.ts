@@ -203,25 +203,25 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Group by department for dashboard view
-    const byDepartment = assignedPatients.reduce((acc, patient) => {
+    // Group by department for dashboard view (using ALL patients)
+    const byDepartment = allPatientsData.reduce((acc, patient) => {
       const dept = patient.department || 'Unknown'
       if (!acc[dept]) {
         acc[dept] = []
       }
       acc[dept].push(patient)
       return acc
-    }, {} as Record<string, typeof assignedPatients>)
+    }, {} as Record<string, typeof allPatientsData>)
 
-    // Group by doctor for doctor dashboard
-    const byDoctor = assignedPatients.reduce((acc, patient) => {
+    // Group by doctor for doctor dashboard (using ALL patients)
+    const byDoctor = allPatientsData.reduce((acc, patient) => {
       const doctor = patient.assignedDoctor || 'Unassigned'
       if (!acc[doctor]) {
         acc[doctor] = []
       }
       acc[doctor].push(patient)
       return acc
-    }, {} as Record<string, typeof assignedPatients>)
+    }, {} as Record<string, typeof allPatientsData>)
 
     console.log('Processed assigned patients:', {
       activePatients: assignedPatients.length,
@@ -233,7 +233,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        allPatients: assignedPatients, // Only active (non-completed) patients for the queue
+        allPatients: allPatientsData, // Return ALL patients (including completed) for full dashboard view
+        activePatients: assignedPatients, // Separate field for only active patients (for doctor's waiting queue)
         byDepartment,
         byDoctor,
         stats: {

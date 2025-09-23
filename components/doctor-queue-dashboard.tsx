@@ -65,8 +65,9 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
       console.log('📊 Queue fetch response:', result)
       
       if (result.success) {
-        const queuePatients = result.data.allPatients
-        console.log('📊 Queue patients:', queuePatients)
+        // For doctor queue, use activePatients (non-completed) for the waiting queue
+        const queuePatients = result.data.activePatients || result.data.allPatients.filter(p => p.visitStatus !== 'completed')
+        console.log('📊 Queue patients (active only):', queuePatients)
         setPatients(queuePatients)
         
         // Find current patient in consultation
