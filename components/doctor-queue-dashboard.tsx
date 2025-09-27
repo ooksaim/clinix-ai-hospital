@@ -31,11 +31,29 @@ interface QueuePatient {
   phone?: string
   chiefComplaint: string
   symptoms?: string
-  visitStatus: 'waiting' | 'in_consultation' | 'completed'
+  visitStatus: 'waiting' | 'in_consultation' | 'completed' | 'admission_requested'
   priority: 'normal' | 'urgent' | 'emergency'
   checkinTime: string
   tokenNumber?: string
   queuePosition?: number
+  requiresAdmission?: boolean
+  admissionReason?: string
+  admissionInfo?: {
+    id: string
+    admissionNumber: string
+    admissionStatus: string
+    admissionReason: string
+    requestedBy: string
+    approvedBy?: string
+    wardId: string
+    wardName: string
+    wardType: string
+    bedId?: string
+    admissionDate: string
+    admissionTime: string
+    createdAt: string
+    updatedAt: string
+  }
 }
 
 interface DoctorQueueProps {
@@ -54,7 +72,8 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
     total: 0,
     waiting: 0,
     inConsultation: 0,
-    completed: 0
+    completed: 0,
+    wardRequests: 0
   })
 
   const fetchQueue = async () => {
@@ -86,9 +105,10 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
         // Update stats using ALL patients (including completed)
         const newStats = {
           total: allPatients.length,
-          waiting: allPatients.filter((p: any) => p.visitStatus === 'waiting' || p.visitStatus === 'admission_requested').length,
+          waiting: allPatients.filter((p: any) => p.visitStatus === 'waiting').length,
           inConsultation: allPatients.filter((p: any) => p.visitStatus === 'in_consultation').length,
-          completed: allPatients.filter((p: any) => p.visitStatus === 'completed').length
+          completed: allPatients.filter((p: any) => p.visitStatus === 'completed').length,
+          wardRequests: allPatients.filter((p: any) => p.visitStatus === 'admission_requested').length
         }
         console.log('📊 Stats updated (with completed):', newStats)
         setStats(newStats)
@@ -176,6 +196,43 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
     } else {
       console.error('❌ onOpenConsultation prop is missing!')
       alert('Consultation interface not available')
+    }
+  }
+
+  const handleWardAdmissionRequest = async (patient: QueuePatient) => {
+    console.log('🏥 Ward Admission Request for patient:', patient)
+    
+    try {
+      // Create admission request
+      const response = await fetch('/api/admissions/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: patient.patientId,
+          visitId: patient.visitId,
+          requestedBy: doctorId,
+          admissionReason: patient.admissionReason || 'Ward admission requested by doctor',
+          urgency: 'normal',
+          wardType: 'general',
+          expectedDuration: '3-5 days',
+          additionalNotes: `Patient consultation completed. Requires ward admission for further treatment.`
+        })
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        console.log('✅ Ward admission request created successfully')
+        alert(`Ward admission request submitted for ${patient.patientName}`)
+        // Refresh the queue to update the display
+        fetchQueue()
+      } else {
+        console.error('❌ Failed to create ward admission request:', result.error)
+        alert('Failed to submit ward admission request: ' + (result.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('💥 Error creating ward admission request:', error)
+      alert('Failed to submit ward admission request: ' + (error as Error).message)
     }
   }
 
@@ -413,12 +470,15 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="waiting" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="waiting">
                 Waiting ({stats.waiting})
               </TabsTrigger>
               <TabsTrigger value="completed">
                 Completed ({stats.completed})
+              </TabsTrigger>
+              <TabsTrigger value="ward-admission">
+                Ward Admissions ({stats.wardRequests || 0})
               </TabsTrigger>
               <TabsTrigger value="all">
                 All Patients ({stats.total})
@@ -436,6 +496,7 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
                       patient={patient}
                       onCallPatient={() => callNextPatient()}
                       showCallButton={true}
+                      onRequestWardAdmission={patient.visitStatus === 'completed' ? () => handleWardAdmissionRequest(patient) : undefined}
                     />
                   ))
                 }
@@ -470,6 +531,28 @@ export function DoctorQueueDashboard({ doctorId, doctorName, onOpenConsultation 
               </div>
             </TabsContent>
 
+            <TabsContent value="ward-admission">
+              <div className="space-y-3">
+                {patients
+                  .filter(p => p.visitStatus === 'admission_requested')
+                  .map((patient) => (
+                    <WardAdmissionCard
+                      key={patient.visitId}
+                      patient={patient}
+                      onRequestAdmission={() => handleWardAdmissionRequest(patient)}
+                    />
+                  ))
+                }
+                {patients.filter(p => p.visitStatus === 'admission_requested').length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No ward admission requests pending</p>
+                    <p className="text-xs text-gray-500 mt-1">Completed patients can request ward admission from the "Completed" tab</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
             <TabsContent value="all">
               <div className="space-y-3">
                 {patients.map((patient) => (
@@ -493,9 +576,10 @@ interface PatientQueueCardProps {
   patient: QueuePatient
   onCallPatient: () => void
   showCallButton: boolean
+  onRequestWardAdmission?: () => void
 }
 
-function PatientQueueCard({ patient, onCallPatient, showCallButton }: PatientQueueCardProps) {
+function PatientQueueCard({ patient, onCallPatient, showCallButton, onRequestWardAdmission }: PatientQueueCardProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'waiting':
@@ -546,12 +630,120 @@ function PatientQueueCard({ patient, onCallPatient, showCallButton }: PatientQue
         <p><strong>Check-in:</strong> {new Date(patient.checkinTime).toLocaleTimeString()}</p>
       </div>
 
-      {showCallButton && (
-        <Button size="sm" variant="outline" onClick={onCallPatient}>
-          <Bell className="h-4 w-4 mr-2" />
-          Call Patient
+      <div className="flex gap-2">
+        {showCallButton && (
+          <Button size="sm" variant="outline" onClick={onCallPatient}>
+            <Bell className="h-4 w-4 mr-2" />
+            Call Patient
+          </Button>
+        )}
+        
+        {patient.visitStatus === 'completed' && onRequestWardAdmission && (
+          <Button size="sm" variant="default" onClick={onRequestWardAdmission} className="bg-amber-600 hover:bg-amber-700">
+            <Users className="h-4 w-4 mr-2" />
+            Request Ward Admission
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface WardAdmissionCardProps {
+  patient: QueuePatient
+  onRequestAdmission: () => void
+}
+
+function WardAdmissionCard({ patient, onRequestAdmission }: WardAdmissionCardProps) {
+  const getAdmissionStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-500 text-white">✅ Approved</Badge>
+      case 'pending':
+        return <Badge className="bg-yellow-500 text-white">⏳ Pending</Badge>
+      case 'active':
+        return <Badge className="bg-blue-500 text-white">🏥 Active</Badge>
+      case 'rejected':
+        return <Badge className="bg-red-500 text-white">❌ Rejected</Badge>
+      case 'discharged':
+        return <Badge className="bg-gray-500 text-white">📤 Discharged</Badge>
+      default:
+        return <Badge className="bg-gray-400 text-white">{status}</Badge>
+    }
+  }
+
+  const getCardBackground = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-50 border-green-200'
+      case 'pending':
+        return 'bg-yellow-50 border-yellow-200'
+      case 'active':
+        return 'bg-blue-50 border-blue-200'
+      case 'rejected':
+        return 'bg-red-50 border-red-200'
+      case 'discharged':
+        return 'bg-gray-50 border-gray-200'
+      default:
+        return 'bg-gray-50 border-gray-200'
+    }
+  }
+
+  const formatDateTime = (dateTime: string) => {
+    return new Date(dateTime).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const admissionStatus = patient.admissionInfo?.admissionStatus || 'pending'
+
+  return (
+    <div className={`border rounded-lg p-4 hover:bg-gray-50 ${getCardBackground(admissionStatus)}`}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-100 text-blue-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+            {patient.tokenNumber}
+          </div>
+          <div>
+            <h3 className="font-semibold">{patient.patientName}</h3>
+            <p className="text-sm text-gray-600">{patient.age} years, {patient.gender}</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {getAdmissionStatusBadge(admissionStatus)}
+        </div>
+      </div>
+      
+      <div className="text-sm text-gray-600 mb-3">
+        <p><strong>Chief Complaint:</strong> {patient.chiefComplaint}</p>
+        {patient.admissionInfo && (
+          <>
+            <p><strong>Admission #:</strong> {patient.admissionInfo.admissionNumber}</p>
+            <p><strong>Status:</strong> {patient.admissionInfo.admissionStatus}</p>
+            <p><strong>Ward Assigned:</strong> {patient.admissionInfo.wardName} ({patient.admissionInfo.wardType})</p>
+            <p><strong>Admission Reason:</strong> {patient.admissionInfo.admissionReason}</p>
+            <p><strong>Requested:</strong> {formatDateTime(patient.admissionInfo.createdAt)}</p>
+            {patient.admissionInfo.bedId && (
+              <p><strong>Bed:</strong> {patient.admissionInfo.bedId}</p>
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" disabled className="opacity-60">
+          <Users className="h-4 w-4 mr-2" />
+          Already Requested
         </Button>
-      )}
+        <Button size="sm" variant="outline">
+          <FileText className="h-4 w-4 mr-2" />
+          View Details
+        </Button>
+      </div>
     </div>
   )
 }

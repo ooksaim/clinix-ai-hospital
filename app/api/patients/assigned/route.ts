@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
         visit_status,
         priority,
         visit_date,
-        checkin_time
+        checkin_time,
+        requires_admission
       `)
       .eq('visit_date', date)
       .order('checkin_time', { ascending: true })
@@ -172,13 +173,23 @@ export async function GET(request: NextRequest) {
         .from('admissions')
         .select(`
           id,
+          admission_number,
           visit_id,
           admission_status,
-          requested_at,
-          approved_at,
+          admission_reason,
           ward_id,
           bed_id,
-          admission_notes
+          requested_by,
+          approved_by,
+          admission_date,
+          admission_time,
+          created_at,
+          updated_at,
+          wards (
+            id,
+            name,
+            ward_type
+          )
         `)
         .in('visit_id', admissionRequestedVisits.map(v => v.id))
 
@@ -219,7 +230,8 @@ export async function GET(request: NextRequest) {
         checkinTime: visit.checkin_time,
         tokenNumber: token?.token_number,
         tokenStatus: token?.token_status,
-        queuePosition: token?.token_number
+        queuePosition: token?.token_number,
+        requiresAdmission: visit.requires_admission || false
       }
     })
 
@@ -238,12 +250,20 @@ export async function GET(request: NextRequest) {
       if (visit.visit_status === 'admission_requested' && admission) {
         displayStatus = 'admission_requested'
         admissionInfo = {
+          id: admission.id,
+          admissionNumber: admission.admission_number,
           admissionStatus: admission.admission_status,
-          requestedAt: admission.requested_at,
-          approvedAt: admission.approved_at,
+          admissionReason: admission.admission_reason,
+          requestedBy: admission.requested_by,
+          approvedBy: admission.approved_by,
           wardId: admission.ward_id,
+          wardName: admission.wards?.name || 'Unknown Ward',
+          wardType: admission.wards?.ward_type || 'general',
           bedId: admission.bed_id,
-          notes: admission.admission_notes
+          admissionDate: admission.admission_date,
+          admissionTime: admission.admission_time,
+          createdAt: admission.created_at,
+          updatedAt: admission.updated_at
         }
       }
 
@@ -271,6 +291,7 @@ export async function GET(request: NextRequest) {
         tokenNumber: token?.token_number,
         tokenStatus: token?.token_status,
         queuePosition: token?.token_number,
+        requiresAdmission: visit.requires_admission || false,
         // Admission workflow info for receptionist
         admissionInfo: admissionInfo
       }

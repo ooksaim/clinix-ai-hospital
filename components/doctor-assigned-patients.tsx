@@ -29,7 +29,7 @@ interface AssignedPatient {
   department: string
   chiefComplaint: string
   symptoms?: string
-  visitStatus: 'waiting' | 'in_consultation' | 'completed'
+  visitStatus: 'waiting' | 'in_consultation' | 'completed' | 'admission_requested'
   priority: 'normal' | 'urgent' | 'emergency'
   checkinTime: string
   tokenNumber?: string
@@ -67,7 +67,7 @@ export function DoctorAssignedPatients({ doctorId }: DoctorAssignedPatientsProps
         // Calculate stats
         setStats({
           total: assignedPatients.length,
-          waiting: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'waiting').length,
+          waiting: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'waiting' || p.visitStatus === 'admission_requested').length,
           inConsultation: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'in_consultation').length,
           completed: assignedPatients.filter((p: AssignedPatient) => p.visitStatus === 'completed').length
         })
@@ -229,7 +229,7 @@ export function DoctorAssignedPatients({ doctorId }: DoctorAssignedPatientsProps
 
             <TabsContent value="waiting">
               <div className="space-y-4">
-                {patients.filter(p => p.visitStatus === 'waiting').map((patient) => (
+                {patients.filter(p => p.visitStatus === 'waiting' || p.visitStatus === 'admission_requested').map((patient) => (
                   <PatientCard
                     key={patient.visitId}
                     patient={patient}
@@ -237,7 +237,7 @@ export function DoctorAssignedPatients({ doctorId }: DoctorAssignedPatientsProps
                     showActions={true}
                   />
                 ))}
-                {patients.filter(p => p.visitStatus === 'waiting').length === 0 && (
+                {patients.filter(p => p.visitStatus === 'waiting' || p.visitStatus === 'admission_requested').length === 0 && (
                   <div className="text-center py-8">
                     <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">No patients waiting</p>

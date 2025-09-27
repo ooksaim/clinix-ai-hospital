@@ -8,7 +8,8 @@ import {
   Settings,
   Microscope,
   AlertTriangle,
-  Scan
+  Scan,
+  Package
 } from "lucide-react"
 
 export function RoleSelectionV2() {
@@ -56,7 +57,7 @@ export function RoleSelectionV2() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
           {[
             { label: "AI Features", value: "27+", icon: "graph" },
-            { label: "Specialized Roles", value: "6", icon: "users" },
+            { label: "Specialized Roles", value: "7", icon: "users" },
             { label: "Standard Compliant", value: "WHO", icon: "check" },
             { label: "AI Availability", value: "24/7", icon: "zap" }
           ].map((stat, i) => (
@@ -321,6 +322,47 @@ export function RoleSelectionV2() {
                 disabled={selectedRole === 'radiologist'}
               >
                 {selectedRole === 'radiologist' ? 'Loading...' : 'Generate Reports'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Pharmacist */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="flex items-center p-5 border-b">
+              <div className="flex-shrink-0 h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <Package className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div className="ml-4 flex-grow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg">Pharmacist</h3>
+                    <p className="text-sm text-gray-600">Pharmacy & Supply Management</p>
+                  </div>
+                  <svg className="h-5 w-5 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-gray-600 mb-4">
+                Comprehensive pharmacy stock management, supply requests fulfillment, and inventory control.
+              </p>
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Key Features</p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-xs bg-gray-100 text-gray-800 rounded-full px-3 py-1">Stock Management</span>
+                  <span className="text-xs bg-gray-100 text-gray-800 rounded-full px-3 py-1">Supply Request Fulfillment</span>
+                  <span className="text-xs bg-gray-100 text-gray-800 rounded-full px-3 py-1">Inventory Analytics</span>
+                  <span className="text-xs bg-gray-100 text-gray-800 rounded-full px-3 py-1">+4 more</span>
+                </div>
+              </div>
+              <button 
+                className="w-full py-3 text-white font-medium bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                onClick={() => handleRoleSelect('pharmacist')}
+                disabled={selectedRole === 'pharmacist'}
+              >
+                {selectedRole === 'pharmacist' ? 'Loading...' : 'Manage Pharmacy'}
               </button>
             </div>
           </div>

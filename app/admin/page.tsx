@@ -81,7 +81,8 @@ export default function AdminDashboard() {
     department_id: '',
     phone: '',
     cnic: '',
-    specialization: ''
+    specialization: '',
+    doctor_type: 'opd'
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -157,7 +158,11 @@ export default function AdminDashboard() {
           first_name: newUser.first_name,
           last_name: newUser.last_name,
           role: newUser.role,
-          department_id: newUser.department_id || null
+          department_id: newUser.department_id || null,
+          phone: newUser.phone,
+          cnic: newUser.cnic,
+          specialization: newUser.role === 'doctor' ? newUser.specialization : undefined,
+          doctor_type: newUser.role === 'doctor' ? newUser.doctor_type : undefined
         })
       })
 
@@ -178,7 +183,8 @@ export default function AdminDashboard() {
         department_id: '',
         phone: '',
         cnic: '',
-        specialization: ''
+        specialization: '',
+        doctor_type: 'opd'
       })
       fetchData() // Refresh users list
     } catch (error: any) {
@@ -428,6 +434,31 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                     </div>
+                    {newUser.role === 'doctor' && (
+                      <div>
+                        <Label htmlFor="doctor_type">Doctor Type</Label>
+                        <Select value={newUser.doctor_type} onValueChange={(value) => setNewUser({...newUser, doctor_type: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select doctor type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="opd">OPD</SelectItem>
+                            <SelectItem value="ward">Ward</SelectItem>
+                            <SelectItem value="both">Both</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {newUser.role === 'doctor' && (
+                      <div>
+                        <Label htmlFor="specialization">Specialization</Label>
+                        <Input
+                          id="specialization"
+                          value={newUser.specialization}
+                          onChange={(e) => setNewUser({...newUser, specialization: e.target.value})}
+                        />
+                      </div>
+                    )}
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -447,17 +478,6 @@ export default function AdminDashboard() {
                         />
                       </div>
                     </div>
-                    
-                    {newUser.role === 'doctor' && (
-                      <div>
-                        <Label htmlFor="specialization">Specialization</Label>
-                        <Input
-                          id="specialization"
-                          value={newUser.specialization}
-                          onChange={(e) => setNewUser({...newUser, specialization: e.target.value})}
-                        />
-                      </div>
-                    )}
                     
                     <div className="flex justify-end space-x-2">
                       <Button type="button" variant="outline" onClick={() => setShowAddUser(false)}>

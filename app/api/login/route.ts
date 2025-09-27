@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
         last_name: profile.last_name,
         role: profile.role,
         department_id: profile.department_id,
-        department_name: department
+        department_name: department,
+        doctor_type: profile.doctor_type || null
       },
       session: authData.session
     })

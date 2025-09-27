@@ -45,17 +45,21 @@ export default function LoginPage() {
         localStorage.setItem('user', JSON.stringify(user))
         
         // Determine target URL
-        const targetUrl = user.role === 'admin' ? '/admin' : 
-                         user.role === 'doctor' ? '/doctor' :
-                         user.role === 'nurse' ? '/nurse' :
-                         user.role === 'receptionist' ? '/receptionist' :
-                         user.role === 'ward_admin' ? '/ward-admin' :
-                         user.role === 'pharmacist' ? '/pharmacy' :
-                         user.role === 'lab_tech' ? '/laboratory' :
-                         user.role === 'radiologist' ? '/radiology' :
-                         user.role === 'emergency' ? '/emergency' :
-                         user.role === 'researcher' ? '/researcher' :
-                         '/roles'
+        let targetUrl = '/roles';
+        if (user.role === 'admin') targetUrl = '/admin';
+        else if (user.role === 'doctor') {
+          if (user.doctor_type === 'ward') targetUrl = '/ward-doctor';
+          else targetUrl = '/doctor';
+        }
+        else if (user.role === 'nurse') targetUrl = '/nurse';
+        else if (user.role === 'receptionist') targetUrl = '/receptionist';
+        else if (user.role === 'ward_admin') targetUrl = '/ward-admin';
+        else if (user.role === 'pharmacist') targetUrl = '/pharmacist';
+        else if (user.role === 'lab_tech') targetUrl = '/laboratory';
+        else if (user.role === 'lab_admin') targetUrl = '/lab-admin';
+        else if (user.role === 'radiologist') targetUrl = '/radiology';
+        else if (user.role === 'emergency') targetUrl = '/emergency';
+        else if (user.role === 'researcher') targetUrl = '/researcher';
         
         console.log('Login successful, redirecting to:', targetUrl)
         

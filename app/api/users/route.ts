@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, first_name, last_name, role, department_id } = await request.json()
+  const { email, password, first_name, last_name, role, department_id, specialization, doctor_type, phone, cnic } = await request.json()
 
     // Create service role client to bypass RLS
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -52,6 +52,10 @@ export async function POST(request: NextRequest) {
         last_name,
         role,
         department_id: department_id || null,
+        specialization: specialization || null,
+        doctor_type: role === 'doctor' ? (doctor_type || 'opd') : null,
+        phone: phone || null,
+        cnic: cnic || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

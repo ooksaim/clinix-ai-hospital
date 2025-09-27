@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { approved_by } = await request.json()
+  const { approved_by, bed_id, assigned_doctor_id } = await request.json()
     const admissionId = params.id
 
     if (!approved_by) {
@@ -29,6 +29,7 @@ export async function POST(
         patient_id,
         admission_number,
         ward_id,
+        requested_by,
         ward:ward_id (
           ward_type,
           name
@@ -52,31 +53,67 @@ export async function POST(
     // Get current ward information
     const currentWard = Array.isArray(admission.ward) ? admission.ward[0] : admission.ward
     
-    // Find an available bed in the assigned ward
-    const { data: availableBed, error: bedError } = await supabase
-      .from('beds')
-      .select('id, bed_number')
-      .eq('ward_id', admission.ward_id)
-      .eq('status', 'available')
-      .limit(1)
-      .single()
+    let selectedBed;
+    
+    if (bed_id) {
+      // Use the specific bed that was selected
+      const { data: specificBed, error: specificBedError } = await supabase
+        .from('beds')
+        .select('id, bed_number, status')
+        .eq('id', bed_id)
+        .eq('ward_id', admission.ward_id)
+        .single()
 
-    if (bedError || !availableBed) {
-      return NextResponse.json(
-        { success: false, error: `No available beds in ${currentWard.name} ward` },
-        { status: 400 }
-      )
+      if (specificBedError || !specificBed) {
+        return NextResponse.json(
+          { success: false, error: 'Selected bed not found in the assigned ward' },
+          { status: 400 }
+        )
+      }
+
+      if (specificBed.status !== 'available') {
+        return NextResponse.json(
+          { success: false, error: 'Selected bed is not available' },
+          { status: 400 }
+        )
+      }
+
+      selectedBed = specificBed
+    } else {
+      // Find an available bed in the assigned ward (original logic)
+      const { data: availableBed, error: bedError } = await supabase
+        .from('beds')
+        .select('id, bed_number')
+        .eq('ward_id', admission.ward_id)
+        .eq('status', 'available')
+        .limit(1)
+        .single()
+
+      if (bedError || !availableBed) {
+        return NextResponse.json(
+          { success: false, error: `No available beds in ${currentWard.name} ward` },
+          { status: 400 }
+        )
+      }
+
+      selectedBed = availableBed
     }
 
     // Update admission status - ward is already assigned, just add bed
+    const admissionUpdatePayload: any = {
+      admission_status: 'approved',
+      bed_id: selectedBed.id,
+      approved_by: approved_by,
+      updated_at: new Date().toISOString()
+    }
+
+    if (assigned_doctor_id) {
+      admissionUpdatePayload.assigned_doctor = assigned_doctor_id
+    }
+
     const { error: updateAdmissionError } = await supabase
       .from('admissions')
-      .update({
-        admission_status: 'approved',
-        bed_id: availableBed.id,
-        approved_by: approved_by,
-        updated_at: new Date().toISOString()
-      })
+      .update(admissionUpdatePayload)
       .eq('id', admissionId)
 
     if (updateAdmissionError) {
@@ -94,7 +131,7 @@ export async function POST(
         status: 'occupied',
         current_patient_id: admission.patient_id
       })
-      .eq('id', availableBed.id)
+      .eq('id', selectedBed.id)
 
     if (updateBedError) {
       console.error('Error updating bed status:', updateBedError)
@@ -122,21 +159,37 @@ export async function POST(
       }
     }
 
-    // Create notification for successful admission
+    // Create notification(s) for successful admission
     const patientInfo = Array.isArray(admission.patient) ? admission.patient[0] : admission.patient
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
+
+    // notify requesting doctor (if any)
+    try {
+      await supabase.from('notifications').insert({
         recipient_type: 'doctor',
-        recipient_id: admission.patient_id, // This should be the requesting doctor's ID
+        recipient_id: admission.requested_by || null,
         title: 'Admission Approved',
-        message: `Admission for ${patientInfo.first_name} ${patientInfo.last_name} (${patientInfo.patient_number}) has been approved. Ward: ${currentWard.name}, Bed: ${availableBed.bed_number}`,
+        message: `Admission for ${patientInfo.first_name} ${patientInfo.last_name} (${patientInfo.patient_number}) has been approved. Ward: ${currentWard.name}, Bed: ${selectedBed.bed_number}`,
         type: 'admission_approved',
         related_id: admissionId
       })
+    } catch (err) {
+      console.error('Error creating notification for requesting doctor:', err)
+    }
 
-    if (notificationError) {
-      console.error('Error creating notification:', notificationError)
+    // notify assigned doctor (if provided)
+    if (assigned_doctor_id) {
+      try {
+        await supabase.from('notifications').insert({
+          recipient_type: 'doctor',
+          recipient_id: assigned_doctor_id,
+          title: 'New Patient Assigned',
+          message: `You have been assigned to patient ${patientInfo.first_name} ${patientInfo.last_name} (Admission: ${admissionId}). Ward: ${currentWard.name}, Bed: ${selectedBed.bed_number}`,
+          type: 'assigned_to_patient',
+          related_id: admissionId
+        })
+      } catch (err) {
+        console.error('Error creating notification for assigned doctor:', err)
+      }
     }
 
     return NextResponse.json({
@@ -145,7 +198,7 @@ export async function POST(
       data: {
         admission_id: admissionId,
         ward_name: currentWard.name,
-        bed_number: availableBed.bed_number
+        bed_number: selectedBed.bed_number
       }
     }, {
       headers: {

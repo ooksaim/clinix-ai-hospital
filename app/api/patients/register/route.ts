@@ -86,10 +86,10 @@ const getNextTokenNumber = async (departmentId: string) => {
 // Simple doctor assignment algorithm (round-robin by workload)
 const assignDoctor = async (departmentId: string) => {
   try {
-    // Get all active doctors in the department
+    // Get all active OPD or Both doctors in the department
     const { data: doctors, error } = await supabase
       .from('user_profiles')
-      .select('id')
+      .select('id, doctor_type')
       .eq('department_id', departmentId)
       .eq('role', 'doctor')
       .eq('is_active', true)
@@ -98,26 +98,28 @@ const assignDoctor = async (departmentId: string) => {
       console.log('No doctors found for department:', departmentId)
       return null
     }
-    
+    // Filter only OPD or Both doctors
+    const opdDoctors = doctors.filter(d => d.doctor_type === 'opd' || d.doctor_type === 'both')
+    if (opdDoctors.length === 0) {
+      console.log('No OPD/Both doctors found for department:', departmentId)
+      return null
+    }
     // Get today's visit counts for each doctor
     const today = new Date().toISOString().split('T')[0]
     const doctorWorkloads = await Promise.all(
-      doctors.map(async (doctor) => {
+      opdDoctors.map(async (doctor) => {
         const { count } = await supabase
-          .from('visits')  // Revert: use visits table
+          .from('visits')
           .select('*', { count: 'exact', head: true })
-          .eq('assigned_doctor_id', doctor.id)  // Revert: use assigned_doctor_id
+          .eq('assigned_doctor_id', doctor.id)
           .eq('visit_date', today)
-        
         return { doctorId: doctor.id, workload: count || 0 }
       })
     )
-    
     // Assign to doctor with least workload
-    const assignedDoctor = doctorWorkloads.reduce((min, current) => 
+    const assignedDoctor = doctorWorkloads.reduce((min, current) =>
       current.workload < min.workload ? current : min
     )
-    
     return assignedDoctor.doctorId
   } catch (error) {
     console.error('Error assigning doctor:', error)

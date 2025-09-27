@@ -106,19 +106,20 @@ export async function POST(request: NextRequest) {
     // Generate admission number
     const admissionNumber = `ADM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
 
-    // Create admission record
+    // Create admission record with pending status
     const admissionData = {
       admission_number: admissionNumber,
       patient_id: patientId,
       visit_id: visitId,
-      ward_id: selectedWard.id, // Now always has a value
+      ward_id: selectedWard.id, // Ward is pre-assigned but pending approval
       attending_doctor_id: requestedBy,
       admission_type: urgency === 'emergency' ? 'emergency' : 'elective',
       admission_reason: admissionReason,
       diagnosis: consultationData?.diagnosis || '',
       treatment_plan: consultationData?.treatmentPlan || '',
-      admission_status: 'active', // Ward is always assigned now
+      admission_status: 'pending', // Start as pending approval
       requested_by: requestedBy,
+      approved_by: null, // Will be set when approved
       expected_discharge_date: expectedDuration ? null : null // TODO: Calculate based on expectedDuration
     }
 
@@ -194,6 +195,12 @@ export async function POST(request: NextRequest) {
           type: selectedWard.ward_type
         },
         message: `Admission request submitted and bed assigned in ${selectedWard.name}`
+      }
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     })
 

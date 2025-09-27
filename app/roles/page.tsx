@@ -120,6 +120,15 @@ export default function RoleSelection() {
       href: '/researcher',
       color: 'bg-pink-500',
       allowed: ['researcher', 'admin']
+    },
+    {
+      id: 'lab-admin',
+      title: 'Laboratory Administration',
+      description: 'Lab management, test coordination, and laboratory operations',
+      icon: Microscope,
+      href: '/lab-admin',
+      color: 'bg-cyan-500',
+      allowed: ['lab_admin', 'admin']
     }
   ]
 
