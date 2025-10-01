@@ -32,6 +32,8 @@ export async function POST(request: NextRequest) {
       wardType
     })
 
+    console.log('🔍 ConsultationData received:', consultationData)
+
     if (!patientId || !visitId || !requestedBy || !admissionReason) {
       return NextResponse.json({
         success: false,
@@ -141,6 +143,38 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Admission record created:', admission.id)
 
+    // 🔄 UPDATE VISITS TABLE - This is the missing piece!
+    console.log('🔄 Updating visits table with consultation data...')
+    
+    const visitUpdateData = {
+      chief_complaint: consultationData?.chiefComplaint || '',
+      symptoms: consultationData?.symptoms || '', // Now using correct field name
+      examination_notes: consultationData?.physicalExamination || '',
+      diagnosis: consultationData?.diagnosis || '',
+      treatment_plan: consultationData?.treatmentPlan || '',
+      follow_up_instructions: consultationData?.followUpInstructions || '',
+      visit_status: 'admission_requested',
+      requires_admission: true,
+      consultation_end_time: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    console.log('🔄 Visit update data:', visitUpdateData)
+
+    const { data: updatedVisit, error: visitError } = await supabase
+      .from('visits')
+      .update(visitUpdateData)
+      .eq('id', visitId)
+      .select()
+      .single()
+
+    if (visitError) {
+      console.error('⚠️ Failed to update visits table:', visitError)
+      // Don't fail the whole request, but log the error
+    } else {
+      console.log('✅ Visits table updated successfully:', updatedVisit.id)
+    }
+
     // Create notification for ward admin
     if (selectedWard.head_nurse_id) {
       const notificationData = {
@@ -168,19 +202,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update visit status to indicate admission requested
-    const { error: visitUpdateError } = await supabase
-      .from('visits')
-      .update({ 
-        visit_status: 'admission_requested',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', visitId)
-
-    if (visitUpdateError) {
-      console.error('⚠️ Failed to update visit status:', visitUpdateError)
-      // Don't fail the whole request
-    }
+    // Note: Visit status already updated above in the comprehensive update
+    console.log('✅ Visit status and consultation data synchronized')
 
     console.log('🏥 Admission request completed successfully')
 

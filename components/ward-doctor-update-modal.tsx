@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, X } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Plus, X, Brain, Sparkles, Send, Loader, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 
 interface TreatmentPlan {
   plan: string;
@@ -38,6 +39,16 @@ interface WardDoctorUpdateModalProps {
   patientId: string;
   admissionId: string;
   doctorId: string;
+  patientData?: {
+    patientName: string;
+    age: number;
+    gender: string;
+    chiefComplaint?: string;
+    opdDiagnosis?: string;
+    admissionReason?: string;
+    medicalHistory?: any;
+  };
+  patientDetails?: any; // Add this to pass full patient details
   initialData?: {
     receivingNotes?: string;
     generalExamination?: string;
@@ -54,6 +65,8 @@ export const WardDoctorUpdateModal: React.FC<WardDoctorUpdateModalProps> = ({
   patientId,
   admissionId,
   doctorId,
+  patientData = {},
+  patientDetails = null,
   initialData = {},
 }) => {
   const [tab, setTab] = useState('update');
@@ -73,6 +86,201 @@ export const WardDoctorUpdateModal: React.FC<WardDoctorUpdateModalProps> = ({
   const [availableSupplies, setAvailableSupplies] = useState<WardSupply[]>([]);
   const [selectedSupplies, setSelectedSupplies] = useState<SelectedSupply[]>([]);
   const [loadingSupplies, setLoadingSupplies] = useState(false);
+
+  // AI Ward Doctor Assistant States
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
+  const [aiQuery, setAiQuery] = useState({
+    // Patient Basic Info
+    patientInfo: '',
+    age: '',
+    gender: '',
+    medicalHistory: '',
+    allergies: '',
+    // OPD Data
+    opdDiagnosis: '',
+    opdSymptoms: '',
+    opdTreatmentPlan: '',
+    opdChiefComplaint: '',
+    // Current Ward Data  
+    currentSymptoms: '',
+    wardFindings: '',
+    physicalExam: '',
+    receivingNotes: '',
+    vitalSigns: '',
+    // Progress & Treatment
+    treatmentProgress: '',
+    currentDiagnosis: '',
+    currentTreatmentPlans: '',
+    // Clinical Context
+    admissionReason: '',
+    daysSinceAdmission: '',
+    additionalNotes: ''
+  });
+
+  // Format medical history for AI context
+  const formatMedicalHistory = (history: any) => {
+    if (!history) return ''
+    
+    let formatted = []
+    
+    if (history.patient?.blood_group) {
+      formatted.push(`Blood Group: ${history.patient.blood_group}`)
+    }
+    
+    if (history.patient?.allergies) {
+      formatted.push(`Allergies: ${history.patient.allergies}`)
+    }
+    
+    if (history.totalVisits) {
+      formatted.push(`Previous Visits: ${history.totalVisits}`)
+    }
+    
+    if (history.currentMedications?.length > 0) {
+      const meds = history.currentMedications.map((med: any) => `${med.medication} (${med.dosage})`).join(', ')
+      formatted.push(`Current Medications: ${meds}`)
+    }
+    
+    if (history.commonDiagnoses?.length > 0) {
+      const diagnoses = history.commonDiagnoses.map((d: any) => d.diagnosis).join(', ')
+      formatted.push(`Previous Diagnoses: ${diagnoses}`)
+    }
+    
+    return formatted.join('\n')
+  }
+
+  // Initialize AI query with comprehensive patient data
+  const initializeWardAIQuery = () => {
+    // Safely access patientData with default values
+    const safePatientData = patientData || {}
+    
+    // Debug: Let's see what we're actually getting
+    console.log('🔍 DEBUG - Full patient data for AI:', {
+      patientData,
+      patientDetails,
+      receivingNotes,
+      generalExamination,
+      diagnosis,
+      treatmentPlans,
+      clinicalInfo
+    })
+    
+    // Calculate days since admission
+    const admissionDate = patientDetails?.admission?.admission_date
+    const daysSinceAdmission = admissionDate ? 
+      Math.floor((new Date().getTime() - new Date(admissionDate).getTime()) / (1000 * 3600 * 24)) : 1
+    
+    // Format comprehensive patient information
+    const patientInfo = `Patient: ${safePatientData.patientName || 'N/A'}, Age: ${safePatientData.age || 'N/A'}, Gender: ${safePatientData.gender || 'N/A'}`
+    const medicalHistoryFormatted = formatMedicalHistory(safePatientData.medicalHistory)
+    
+    // Get all current vital signs if available
+    const currentVitalSigns = patientDetails?.vitalSigns ? 
+      `BP: ${patientDetails.vitalSigns.bloodPressure || 'N/A'}, Temp: ${patientDetails.vitalSigns.temperature || 'N/A'}°F, HR: ${patientDetails.vitalSigns.heartRate || 'N/A'} bpm, RR: ${patientDetails.vitalSigns.respiratoryRate || 'N/A'}, O2: ${patientDetails.vitalSigns.oxygenSaturation || 'N/A'}%` :
+      'Vital signs not recorded'
+    
+    setAiQuery({
+      // Patient Basic Info
+      patientInfo: patientInfo,
+      age: String(safePatientData.age || 'Unknown'),
+      gender: safePatientData.gender || 'Unknown',
+      medicalHistory: medicalHistoryFormatted || 'No medical history available',
+      allergies: patientDetails?.admission?.patient?.allergies || 'No known allergies',
+      
+      // OPD Data (from visits table and patient data)
+      opdDiagnosis: patientDetails?.visits?.diagnosis || safePatientData.opdDiagnosis || 'No OPD diagnosis available',
+      opdSymptoms: patientDetails?.visits?.symptoms || 'No OPD symptoms recorded',
+      opdTreatmentPlan: patientDetails?.visits?.treatment_plan || 'No OPD treatment plan available',
+      opdChiefComplaint: patientDetails?.visits?.chief_complaint || safePatientData.chiefComplaint || 'No chief complaint recorded',
+      
+      // Current Ward Data (from current form)
+      currentSymptoms: safePatientData.chiefComplaint || receivingNotes || 'No current symptoms noted',
+      wardFindings: generalExamination || 'No ward findings recorded',
+      physicalExam: generalExamination || 'Physical examination pending',
+      receivingNotes: receivingNotes || 'No receiving notes available',
+      vitalSigns: currentVitalSigns,
+      
+      // Progress & Treatment (current form data)
+      treatmentProgress: treatmentPlans.map(tp => tp.plan).join('\n') || 'No treatment progress noted',
+      currentDiagnosis: diagnosis || 'Diagnosis pending',
+      currentTreatmentPlans: treatmentPlans.map((tp, i) => `${i + 1}. ${tp.plan}`).join('\n') || 'No current treatment plans',
+      
+      // Clinical Context
+      admissionReason: safePatientData.admissionReason || patientDetails?.admission?.admission_reason || 'Admission reason not specified',
+      daysSinceAdmission: String(daysSinceAdmission),
+      additionalNotes: clinicalInfo || 'No additional clinical notes'
+    })
+    
+    setAiResponse('')
+    setShowAIDialog(true)
+    console.log('🤖 AI Query prepared with comprehensive patient data')
+  }
+
+  // Send comprehensive ward data to AI for analysis
+  const askWardAIForDiagnosis = async () => {
+    setAiLoading(true)
+    try {
+      const response = await fetch('/api/ai/ward-diagnosis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Patient Basic Information
+          patientInfo: aiQuery.patientInfo,
+          age: aiQuery.age,
+          gender: aiQuery.gender,
+          medicalHistory: aiQuery.medicalHistory,
+          allergies: aiQuery.allergies,
+          
+          // OPD Consultation Data
+          opdDiagnosis: aiQuery.opdDiagnosis,
+          opdSymptoms: aiQuery.opdSymptoms,
+          opdTreatmentPlan: aiQuery.opdTreatmentPlan,
+          opdChiefComplaint: aiQuery.opdChiefComplaint,
+          
+          // Current Ward Assessment
+          currentSymptoms: aiQuery.currentSymptoms,
+          wardFindings: aiQuery.wardFindings,
+          physicalExam: aiQuery.physicalExam,
+          receivingNotes: aiQuery.receivingNotes,
+          vitalSigns: aiQuery.vitalSigns,
+          
+          // Treatment Progress & Current Status
+          treatmentProgress: aiQuery.treatmentProgress,
+          currentDiagnosis: aiQuery.currentDiagnosis,
+          currentTreatmentPlans: aiQuery.currentTreatmentPlans,
+          
+          // Clinical Context
+          admissionReason: aiQuery.admissionReason,
+          daysSinceAdmission: aiQuery.daysSinceAdmission,
+          additionalNotes: aiQuery.additionalNotes,
+          
+          context: 'comprehensive_ward_analysis'
+        })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        setAiResponse(result.diagnosis)
+      } else {
+        setAiResponse(`Error: ${result.error || 'Failed to get AI diagnosis assistance'}`)
+      }
+    } catch (error) {
+      console.error('Ward AI consultation error:', error)
+      setAiResponse('Sorry, I encountered an error while processing your request. Please try again.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // Use AI suggestion in diagnosis field
+  const useWardAISuggestion = () => {
+    if (aiResponse) {
+      setDiagnosis(prev => prev ? `${prev}\n\n--- AI Ward Analysis ---\n${aiResponse}` : aiResponse)
+      setShowAIDialog(false)
+    }
+  }
 
   const handleTreatmentPlanChange = (idx: number, value: string) => {
     setTreatmentPlans((prev) => prev.map((tp, i) => (i === idx ? { plan: value } : tp)));
@@ -232,7 +440,8 @@ export const WardDoctorUpdateModal: React.FC<WardDoctorUpdateModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-lg w-full p-0 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-6 pb-2 border-b sticky top-0 bg-white z-10">
           <DialogTitle className="text-2xl font-bold text-gray-900">Patient Actions</DialogTitle>
@@ -270,7 +479,19 @@ export const WardDoctorUpdateModal: React.FC<WardDoctorUpdateModalProps> = ({
                 <label className="font-medium">Expert Opinion Requested</label>
               </div>
               <div>
-                <label className="block font-medium mb-1">Diagnosis</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-medium">Diagnosis</label>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm" 
+                    onClick={initializeWardAIQuery}
+                    className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
+                  >
+                    <Brain className="h-4 w-4 mr-2" />
+                    Ask AI
+                  </Button>
+                </div>
                 <Textarea
                   value={diagnosis}
                   onChange={e => setDiagnosis(e.target.value)}
@@ -477,5 +698,226 @@ export const WardDoctorUpdateModal: React.FC<WardDoctorUpdateModalProps> = ({
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    {/* AI Ward Doctor Assistant Dialog */}
+    {showAIDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[70] p-4">
+        <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-auto">
+          <div className="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-2 rounded-lg">
+                  <Brain className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Ward AI Assistant</h2>
+                  <p className="text-sm text-gray-600">Compare OPD diagnosis with current ward findings</p>
+                </div>
+              </div>
+              <Button variant="ghost" onClick={() => setShowAIDialog(false)}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Close
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Input Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  <h3 className="font-semibold text-lg">Patient Information & Progress</h3>
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-patient-info">Patient Info</Label>
+                  <Textarea
+                    id="ward-patient-info"
+                    value={aiQuery.patientInfo}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, patientInfo: e.target.value }))}
+                    placeholder="Patient details and medical history..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-opd-diagnosis">Original OPD Diagnosis</Label>
+                  <Textarea
+                    id="ward-opd-diagnosis"
+                    value={aiQuery.opdDiagnosis}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, opdDiagnosis: e.target.value }))}
+                    placeholder="Original diagnosis from OPD doctor..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-opd-symptoms">OPD Symptoms & Chief Complaint</Label>
+                  <Textarea
+                    id="ward-opd-symptoms"
+                    value={`Chief Complaint: ${aiQuery.opdChiefComplaint}\nSymptoms: ${aiQuery.opdSymptoms}`}
+                    onChange={(e) => {
+                      const lines = e.target.value.split('\n');
+                      const chiefComplaint = lines.find(line => line.startsWith('Chief Complaint:'))?.substring(17) || '';
+                      const symptoms = lines.find(line => line.startsWith('Symptoms:'))?.substring(9) || '';
+                      setAiQuery(prev => ({ 
+                        ...prev, 
+                        opdChiefComplaint: chiefComplaint.trim(),
+                        opdSymptoms: symptoms.trim()
+                      }));
+                    }}
+                    placeholder="Chief Complaint: Original patient complaint from OPD&#10;Symptoms: Initial symptoms documented by OPD"
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-vital-signs">Current Vital Signs</Label>
+                  <Textarea
+                    id="ward-vital-signs"
+                    value={aiQuery.vitalSigns}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, vitalSigns: e.target.value }))}
+                    placeholder="BP, Temperature, Heart Rate, Respiratory Rate, O2 Saturation..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-current-symptoms">Current Symptoms/Complaints</Label>
+                  <Textarea
+                    id="ward-current-symptoms"
+                    value={aiQuery.currentSymptoms}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, currentSymptoms: e.target.value }))}
+                    placeholder="Current patient symptoms and complaints..."
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-findings">Ward Examination Findings</Label>
+                  <Textarea
+                    id="ward-findings"
+                    value={aiQuery.wardFindings}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, wardFindings: e.target.value }))}
+                    placeholder="Current examination findings in the ward..."
+                    className="mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-treatment-progress">Treatment Progress</Label>
+                  <Textarea
+                    id="ward-treatment-progress"
+                    value={aiQuery.treatmentProgress}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, treatmentProgress: e.target.value }))}
+                    placeholder="Response to current treatment, progress notes..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ward-additional-notes">Additional Notes</Label>
+                  <Textarea
+                    id="ward-additional-notes"
+                    value={aiQuery.additionalNotes}
+                    onChange={(e) => setAiQuery(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                    placeholder="Admission reason, other relevant information..."
+                    className="mt-1"
+                    rows={2}
+                  />
+                </div>
+
+                <Button
+                  onClick={askWardAIForDiagnosis}
+                  disabled={aiLoading || !aiQuery.opdDiagnosis.trim()}
+                  className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                >
+                  {aiLoading ? (
+                    <>
+                      <Loader className="h-4 w-4 mr-2 animate-spin" />
+                      Analyzing Ward vs OPD...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Get Ward AI Analysis
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* AI Response Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Brain className="h-5 w-5 text-blue-500" />
+                  <h3 className="font-semibold text-lg">Ward AI Analysis</h3>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4 min-h-[500px]">
+                  {aiLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+                      <p className="text-gray-600">AI is comparing OPD vs Ward findings...</p>
+                      <p className="text-sm text-gray-500 mt-2">Analyzing treatment progression and recommendations</p>
+                    </div>
+                  ) : aiResponse ? (
+                    <div className="space-y-4">
+                      <div className="prose prose-sm max-w-none">
+                        <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
+                          {aiResponse}
+                        </pre>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4 border-t">
+                        <Button
+                          onClick={useWardAISuggestion}
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Use This Analysis
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setAiResponse('')}
+                        >
+                          Clear Response
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+                      <Brain className="h-12 w-12 mb-4 text-gray-300" />
+                      <p>Ward AI analysis will appear here</p>
+                      <p className="text-sm mt-2">AI will compare OPD diagnosis with current ward findings and provide comprehensive insights</p>
+                    </div>
+                  )}
+                </div>
+
+                {aiResponse && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
+                      <div className="text-xs text-amber-700">
+                        <p className="font-medium">⚠️ Medical Disclaimer</p>
+                        <p>AI analysis is for educational support. Always use clinical judgment and consider all relevant factors in patient care decisions.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };

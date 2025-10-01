@@ -11,6 +11,12 @@ interface PatientDetails {
   bed_number: string
   bed_type: string
   bed_status: string
+  visits?: {
+    chief_complaint?: string
+    symptoms?: string
+    diagnosis?: string
+    treatment_plan?: string
+  }
   admission: {
     id: string
     admission_number: string
@@ -270,6 +276,22 @@ export function PatientInfoModal({ isOpen, onClose, patientDetails, loading }: P
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      {patientDetails.visits?.chief_complaint && (
+                        <div>
+                          <p className="text-sm font-medium text-purple-700">Chief Complaint</p>
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mt-1">
+                            <p className="text-sm text-purple-900">{patientDetails.visits.chief_complaint}</p>
+                          </div>
+                        </div>
+                      )}
+                      {patientDetails.visits?.symptoms && (
+                        <div>
+                          <p className="text-sm font-medium text-orange-700">Symptoms</p>
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-1">
+                            <p className="text-sm text-orange-900">{patientDetails.visits.symptoms}</p>
+                          </div>
+                        </div>
+                      )}
                       {patientDetails.admission.diagnosis && (
                         <div>
                           <p className="text-sm font-medium text-blue-700">Diagnosis</p>

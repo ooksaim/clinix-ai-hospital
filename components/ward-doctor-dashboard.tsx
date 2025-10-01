@@ -32,6 +32,7 @@ export default function WardDoctorDashboard() {
   const [patients, setPatients] = useState<WardPatient[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updatePatient, setUpdatePatient] = useState<WardPatient | null>(null);
+  const [updatePatientDetails, setUpdatePatientDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -68,6 +69,27 @@ export default function WardDoctorDashboard() {
     } finally {
       setLoadingPatientDetails(false);
     }
+  };
+
+  // Fetch patient details for update modal
+  const fetchPatientDetailsForUpdate = async (patient: WardPatient) => {
+    try {
+      const response = await fetch(`/api/ward-admin/patient-details?bed_id=${encodeURIComponent(patient.bedNumber)}`);
+      if (!response.ok) throw new Error('Failed to fetch patient details');
+      const data = await response.json();
+      if (data.success) {
+        console.log('🔍 DEBUG - Patient details fetched:', data.data);
+        console.log('🔍 DEBUG - Admission data:', data.data.admission);
+        setUpdatePatientDetails(data.data);
+      } else {
+        setUpdatePatientDetails(null);
+      }
+    } catch (error) {
+      console.error('Error fetching patient details for update:', error);
+      setUpdatePatientDetails(null);
+    }
+    setUpdatePatient(patient);
+    setShowUpdateModal(true);
   };
 
   // Helper to get doctor id from localStorage (matches other dashboards)
@@ -281,7 +303,6 @@ export default function WardDoctorDashboard() {
                       <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bed</th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Ward</th>
-                      <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Diagnosis</th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -311,9 +332,6 @@ export default function WardDoctorDashboard() {
                         <td className="px-2 py-4 text-sm text-gray-900 hidden md:table-cell">
                           <span className="truncate max-w-[80px] block">{p.wardName}</span>
                         </td>
-                        <td className="px-2 py-4 text-sm text-gray-900 hidden lg:table-cell">
-                          <span className="truncate max-w-[100px] block">{p.diagnosis}</span>
-                        </td>
                         <td className="px-2 py-4">
                           <Badge className={`text-xs ${
                             p.admissionStatus === 'active' ? 'bg-green-100 text-green-800' : ''
@@ -332,10 +350,7 @@ export default function WardDoctorDashboard() {
                               View
                             </Button>
                             <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1"
-                              onClick={() => {
-                                setUpdatePatient(p);
-                                setShowUpdateModal(true);
-                              }}>
+                              onClick={() => fetchPatientDetailsForUpdate(p)}>
                               Update
                             </Button>
                           </div>
@@ -486,10 +501,23 @@ export default function WardDoctorDashboard() {
         onClose={() => {
           setShowUpdateModal(false);
           setUpdatePatient(null);
+          setUpdatePatientDetails(null);
         }}
         patientId={updatePatient?.patientId || ''}
         admissionId={updatePatient?.admissionId || ''}
         doctorId={getDoctorIdFromLocalStorage() || ''}
+        patientDetails={updatePatientDetails} // Pass the full patient details
+        patientData={{
+          patientName: updatePatientDetails?.admission?.patient?.first_name && updatePatientDetails?.admission?.patient?.last_name 
+            ? `${updatePatientDetails.admission.patient.first_name} ${updatePatientDetails.admission.patient.last_name}`
+            : updatePatient?.patientName || 'N/A',
+          age: updatePatientDetails?.admission?.patient?.age || updatePatient?.age || 0,
+          gender: updatePatientDetails?.admission?.patient?.gender || updatePatient?.gender || 'N/A',
+          chiefComplaint: updatePatientDetails?.visits?.symptoms || updatePatientDetails?.visits?.chief_complaint || updatePatient?.notes || '',
+          opdDiagnosis: updatePatientDetails?.visits?.diagnosis || updatePatientDetails?.admission?.diagnosis || updatePatient?.diagnosis || 'No OPD diagnosis available',
+          admissionReason: updatePatientDetails?.admission?.admission_reason || 'No admission reason available',
+          medicalHistory: updatePatientDetails?.medicalHistory || null
+        }}
         onSubmit={async (data) => {
           if (!updatePatient || !updatePatient.admissionId) {
             alert('Error: No valid admission ID for this patient.');

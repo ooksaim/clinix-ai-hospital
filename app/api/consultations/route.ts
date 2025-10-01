@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       .from('visits')
       .update({
         chief_complaint: consultationData.chiefComplaint,
-        symptoms: consultationData.historyOfPresentIllness,
+        symptoms: consultationData.symptoms,
         examination_notes: consultationData.physicalExamination,
         diagnosis: consultationData.diagnosis,
         treatment_plan: consultationData.treatmentPlan,
@@ -43,6 +43,22 @@ export async function POST(request: Request) {
         error: 'Failed to save consultation data',
         details: visitError.message 
       }, { status: 500 })
+    }
+
+    // Update patient allergies if provided
+    if (consultationData.allergies !== undefined) {
+      const { error: patientError } = await supabase
+        .from('patients')
+        .update({
+          allergies: consultationData.allergies || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', visit.patient_id)
+
+      if (patientError) {
+        console.error('Error updating patient allergies:', patientError)
+        // Don't fail the whole request, just log the error
+      }
     }
 
     // Save vital signs if provided (using existing patient_vitals table)

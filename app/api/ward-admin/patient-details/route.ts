@@ -84,12 +84,29 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Get visits/consultation data for this patient
+      let visitsData = null
+      const { data: visits, error: visitsError } = await supabase
+        .from('visits')
+        .select('id, chief_complaint, symptoms, diagnosis, examination_notes, treatment_plan, follow_up_instructions, visit_date, visit_status')
+        .eq('patient_id', admissionData.patient_id)
+        .eq('requires_admission', true)
+        .order('visit_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (!visitsError && visits) {
+        visitsData = visits
+        console.log('✅ Found OPD consultation data for admission:', visitsData)
+      }
+
       // Format response data
       const responseData = {
         id: bedData?.id || 'N/A',
         bed_number: bedData?.bed_number || 'Unassigned',
         bed_type: bedData?.bed_type || 'N/A',
         bed_status: bedData?.status || 'unassigned',
+        visits: visitsData, // Include OPD consultation data
         admission: {
           ...admissionData,
           patient: patientData
@@ -215,13 +232,32 @@ export async function GET(request: NextRequest) {
       assignedDoctor = assDoc
     }
 
-    // Step 7: Combine all data
+    // Step 7: Get visits/consultation data for this patient
+    let visitsData = null
+    const { data: visits, error: visitsError } = await supabase
+      .from('visits')
+      .select('id, chief_complaint, symptoms, diagnosis, examination_notes, treatment_plan, follow_up_instructions, visit_date, visit_status')
+      .eq('patient_id', admissionData.patient_id)
+      .eq('requires_admission', true)
+      .order('visit_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!visitsError && visits) {
+      visitsData = visits
+      console.log('✅ Found OPD consultation data:', visitsData)
+    } else {
+      console.log('ℹ️ No visits/consultation data found or error:', visitsError)
+    }
+
+    // Step 8: Combine all data
     const combinedData = {
       id: bedData.id,
       bed_number: bedData.bed_number,
       bed_type: bedData.bed_type,
       bed_status: bedData.status,
       ward: wardData,
+      visits: visitsData, // Include OPD consultation data
       admission: {
         ...admissionData,
         patient: patientData,

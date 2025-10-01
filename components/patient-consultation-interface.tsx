@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { 
   User, 
   FileText, 
@@ -25,7 +26,11 @@ import {
   Calendar,
   AlertCircle,
   Activity,
-  Building
+  Building,
+  Brain,
+  Sparkles,
+  Send,
+  Loader
 } from 'lucide-react'
 
 interface Patient {
@@ -65,8 +70,9 @@ interface Prescription {
 
 interface ConsultationData {
   chiefComplaint: string
-  historyOfPresentIllness: string
+  symptoms: string
   pastMedicalHistory: string
+  allergies: string
   physicalExamination: string
   vitalSigns: VitalSigns
   diagnosis: string
@@ -94,8 +100,9 @@ export function PatientConsultationInterface({
 }: PatientConsultationProps) {
   const [consultationData, setConsultationData] = useState<ConsultationData>({
     chiefComplaint: patient.chiefComplaint || '',
-    historyOfPresentIllness: '',
+    symptoms: patient.symptoms || '',
     pastMedicalHistory: '',
+    allergies: '',
     physicalExamination: '',
     vitalSigns: {},
     diagnosis: '',
@@ -119,6 +126,19 @@ export function PatientConsultationInterface({
   const [activeTab, setActiveTab] = useState('patient-history') // Start with patient history
   const [medicalHistory, setMedicalHistory] = useState<any>(null)
   const [loadingHistory, setLoadingHistory] = useState(true)
+
+  // AI Diagnosis Assistant States
+  const [showAIDialog, setShowAIDialog] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResponse, setAiResponse] = useState('')
+  const [aiQuery, setAiQuery] = useState({
+    symptoms: '',
+    medicalHistory: '',
+    physicalExam: '',
+    vitalSigns: '',
+    chiefComplaint: '',
+    additionalInfo: ''
+  })
 
   const addPrescription = () => {
     const newPrescription: Prescription = {
@@ -169,6 +189,13 @@ export function PatientConsultationInterface({
       if (result.success) {
         console.log('✅ Medical history loaded:', result.data)
         setMedicalHistory(result.data)
+        // Update allergies field with patient's allergies from the database
+        if (result.data?.patient?.allergies) {
+          setConsultationData(prev => ({
+            ...prev,
+            allergies: result.data.patient.allergies
+          }))
+        }
       } else {
         console.error('❌ Failed to load medical history:', result.error)
         setMedicalHistory(null)
@@ -185,6 +212,119 @@ export function PatientConsultationInterface({
   useEffect(() => {
     fetchMedicalHistory()
   }, [patient.patientId])
+
+  // Initialize AI query with patient data when dialog opens
+  const initializeAIQuery = () => {
+    // Format medical history object into readable text
+    const formatMedicalHistory = (history: any) => {
+      if (!history) return ''
+      
+      let formatted = []
+      
+      // Basic patient info
+      if (history.patient?.blood_group) {
+        formatted.push(`Blood Group: ${history.patient.blood_group}`)
+      }
+      
+      if (history.patient?.allergies) {
+        formatted.push(`Allergies: ${history.patient.allergies}`)
+      }
+      
+      // Visit history
+      if (history.totalVisits) {
+        formatted.push(`Total Previous Visits: ${history.totalVisits}`)
+      }
+      
+      if (history.summary?.lastVisitDate) {
+        formatted.push(`Last Visit: ${new Date(history.summary.lastVisitDate).toLocaleDateString()}`)
+      }
+      
+      // Current medications
+      if (history.currentMedications?.length > 0) {
+        const meds = history.currentMedications.map((med: any) => `${med.medication} (${med.dosage})`).join(', ')
+        formatted.push(`Current Medications: ${meds}`)
+      }
+      
+      // Common diagnoses
+      if (history.commonDiagnoses?.length > 0) {
+        const diagnoses = history.commonDiagnoses.map((d: any) => d.diagnosis).join(', ')
+        formatted.push(`Previous Diagnoses: ${diagnoses}`)
+      }
+      
+      // Recent visits
+      if (history.recentVisits?.length > 0) {
+        const recentVisit = history.recentVisits[0]
+        if (recentVisit.diagnosis) {
+          formatted.push(`Most Recent Diagnosis: ${recentVisit.diagnosis}`)
+        }
+      }
+      
+      return formatted.join('\n')
+    }
+
+    setAiQuery({
+      symptoms: patient.symptoms || patient.chiefComplaint || '',
+      medicalHistory: consultationData.pastMedicalHistory || formatMedicalHistory(medicalHistory),
+      physicalExam: consultationData.physicalExamination || '',
+      vitalSigns: `BP: ${consultationData.vitalSigns.bloodPressure || 'N/A'}, Temp: ${consultationData.vitalSigns.temperature || 'N/A'}°F, HR: ${consultationData.vitalSigns.heartRate || 'N/A'} bpm, RR: ${consultationData.vitalSigns.respiratoryRate || 'N/A'}, O2: ${consultationData.vitalSigns.oxygenSaturation || 'N/A'}%`,
+      chiefComplaint: patient.chiefComplaint || '',
+      additionalInfo: `${consultationData.symptoms || ''} ${consultationData.allergies ? `\nKnown Allergies: ${consultationData.allergies}` : ''}`
+    })
+    setAiResponse('')
+    setShowAIDialog(true)
+  }
+
+  // Send query to AI for diagnosis assistance
+  const askAIForDiagnosis = async () => {
+    setAiLoading(true)
+    try {
+      console.log('🤖 Requesting AI diagnosis assistance...')
+      
+      const response = await fetch('/api/ai/diagnosis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          symptoms: aiQuery.symptoms,
+          medicalHistory: aiQuery.medicalHistory,
+          physicalExam: aiQuery.physicalExam,
+          vitalSigns: aiQuery.vitalSigns,
+          chiefComplaint: aiQuery.chiefComplaint,
+          additionalInfo: aiQuery.additionalInfo,
+          patientAge: patient.age,
+          patientGender: patient.gender
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        console.log('✅ AI diagnosis received successfully')
+        console.log(`📊 Tokens used: ${result.metadata?.tokensUsed || 'Unknown'}`)
+        setAiResponse(result.response)
+      } else {
+        console.error('❌ AI diagnosis failed:', result.error)
+        setAiResponse(`❌ **Error:** ${result.error}\n\nPlease check your API configuration or try again later.`)
+      }
+    } catch (error) {
+      console.error('💥 AI consultation network error:', error)
+      setAiResponse(`❌ **Network Error:** Unable to connect to AI service.\n\nPlease check your internet connection and try again.`)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  // Use AI suggestion in diagnosis field
+  const useAISuggestion = () => {
+    if (aiResponse) {
+      setConsultationData(prev => ({
+        ...prev,
+        diagnosis: prev.diagnosis ? `${prev.diagnosis}\n\n--- AI Suggestion ---\n${aiResponse}` : aiResponse
+      }))
+      setShowAIDialog(false)
+    }
+  }
 
   const saveConsultation = async () => {
     try {
@@ -311,8 +451,8 @@ export function PatientConsultationInterface({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-[98vw] h-[98vh] flex flex-col m-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-auto">
+      <div className="bg-white rounded-lg w-full max-w-[98vw] min-h-screen flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-4">
@@ -384,8 +524,8 @@ export function PatientConsultationInterface({
         </div>
 
         {/* Consultation Content */}
-        <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+        <div className="flex-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
             <TabsList className="grid w-full grid-cols-6 m-4">
               <TabsTrigger value="patient-history">Patient History</TabsTrigger>
               <TabsTrigger value="history">History & Examination</TabsTrigger>
@@ -395,7 +535,7 @@ export function PatientConsultationInterface({
               <TabsTrigger value="notes">Notes & Follow-up</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-auto px-4 pb-4">
+            <div className="px-4 pb-4">
               {/* Patient Medical History Tab */}
               <TabsContent value="patient-history" className="mt-0">
                 <div className="space-y-6">
@@ -618,13 +758,13 @@ export function PatientConsultationInterface({
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>History of Present Illness</CardTitle>
+                      <CardTitle>Symptoms</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <Textarea
-                        value={consultationData.historyOfPresentIllness}
-                        onChange={(e) => setConsultationData(prev => ({ ...prev, historyOfPresentIllness: e.target.value }))}
-                        placeholder="Detailed history of current illness, timeline, symptoms progression..."
+                        value={consultationData.symptoms}
+                        onChange={(e) => setConsultationData(prev => ({ ...prev, symptoms: e.target.value }))}
+                        placeholder="Detailed symptoms, progression, timeline of present illness..."
                         className="min-h-32"
                       />
                     </CardContent>
@@ -638,9 +778,39 @@ export function PatientConsultationInterface({
                       <Textarea
                         value={consultationData.pastMedicalHistory}
                         onChange={(e) => setConsultationData(prev => ({ ...prev, pastMedicalHistory: e.target.value }))}
-                        placeholder="Previous illnesses, surgeries, medications, allergies..."
+                        placeholder="Previous illnesses, surgeries, medications..."
                         className="min-h-24"
                       />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-500" />
+                        Patient Allergies
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <Textarea
+                          value={consultationData.allergies}
+                          onChange={(e) => setConsultationData(prev => ({ ...prev, allergies: e.target.value }))}
+                          placeholder="Known allergies, drug reactions, food allergies..."
+                          className="min-h-20"
+                        />
+                        {medicalHistory?.patient?.allergies && (
+                          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                            <p className="text-sm text-red-600 font-medium">Patient's Recorded Allergies:</p>
+                            <p className="text-sm text-red-700 mt-1">{medicalHistory.patient.allergies}</p>
+                          </div>
+                        )}
+                        {!medicalHistory?.patient?.allergies && (
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm text-green-700">No known allergies recorded in patient's medical history.</p>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -751,7 +921,18 @@ export function PatientConsultationInterface({
                 <div className="space-y-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Clinical Diagnosis</CardTitle>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Clinical Diagnosis</CardTitle>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={initializeAIQuery}
+                          className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-blue-100"
+                        >
+                          <Brain className="h-4 w-4 mr-2" />
+                          Ask AI
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <Textarea
@@ -934,6 +1115,192 @@ export function PatientConsultationInterface({
           </Tabs>
         </div>
       </div>
+
+      {/* AI Diagnosis Assistant Dialog */}
+      {showAIDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-2 rounded-lg">
+                    <Brain className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">AI Diagnosis Assistant</h2>
+                    <p className="text-sm text-gray-600">Get AI-powered insights for differential diagnosis</p>
+                  </div>
+                </div>
+                <Button variant="ghost" onClick={() => setShowAIDialog(false)}>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Close
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Input Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="h-5 w-5 text-purple-500" />
+                    <h3 className="font-semibold text-lg">Patient Information</h3>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-chief-complaint">Chief Complaint</Label>
+                    <Textarea
+                      id="ai-chief-complaint"
+                      value={aiQuery.chiefComplaint}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, chiefComplaint: e.target.value }))}
+                      placeholder="Primary reason for visit..."
+                      className="mt-1"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-symptoms">Current Symptoms</Label>
+                    <Textarea
+                      id="ai-symptoms"
+                      value={aiQuery.symptoms}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, symptoms: e.target.value }))}
+                      placeholder="Detailed symptom description..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-medical-history">Medical History</Label>
+                    <Textarea
+                      id="ai-medical-history"
+                      value={aiQuery.medicalHistory}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, medicalHistory: e.target.value }))}
+                      placeholder="Past medical history, medications, allergies..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-physical-exam">Physical Examination</Label>
+                    <Textarea
+                      id="ai-physical-exam"
+                      value={aiQuery.physicalExam}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, physicalExam: e.target.value }))}
+                      placeholder="Physical examination findings..."
+                      className="mt-1"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-vital-signs">Vital Signs</Label>
+                    <Input
+                      id="ai-vital-signs"
+                      value={aiQuery.vitalSigns}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, vitalSigns: e.target.value }))}
+                      placeholder="BP, Temp, HR, RR, O2 Sat..."
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ai-additional">Additional Information</Label>
+                    <Textarea
+                      id="ai-additional"
+                      value={aiQuery.additionalInfo}
+                      onChange={(e) => setAiQuery(prev => ({ ...prev, additionalInfo: e.target.value }))}
+                      placeholder="Any other relevant information..."
+                      className="mt-1"
+                      rows={2}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={askAIForDiagnosis}
+                    disabled={aiLoading || !aiQuery.symptoms.trim()}
+                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  >
+                    {aiLoading ? (
+                      <>
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Get AI Diagnosis Suggestions
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* AI Response Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className="h-5 w-5 text-blue-500" />
+                    <h3 className="font-semibold text-lg">AI Analysis</h3>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 min-h-[400px]">
+                    {aiLoading ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+                        <p className="text-gray-600">AI is analyzing patient data...</p>
+                        <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+                      </div>
+                    ) : aiResponse ? (
+                      <div className="space-y-4">
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
+                            {aiResponse}
+                          </pre>
+                        </div>
+                        
+                        <div className="flex gap-2 pt-4 border-t">
+                          <Button
+                            onClick={useAISuggestion}
+                            className="bg-green-500 hover:bg-green-600"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Use This Suggestion
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => setAiResponse('')}
+                          >
+                            Clear Response
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+                        <Brain className="h-12 w-12 mb-4 text-gray-300" />
+                        <p>AI diagnosis suggestions will appear here</p>
+                        <p className="text-sm mt-2">Fill in the patient information and click "Get AI Diagnosis Suggestions"</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {aiResponse && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
+                        <div className="text-xs text-amber-700">
+                          <p className="font-medium">⚠️ Medical Disclaimer</p>
+                          <p>AI suggestions are for educational purposes only. Always use your clinical judgment and consider all relevant factors before making diagnostic decisions.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Admission Request Form Dialog */}
       {showAdmissionForm && (
