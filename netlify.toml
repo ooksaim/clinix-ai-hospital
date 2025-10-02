@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm ci --legacy-peer-deps && npm run build"
   publish = ".next"
 
 [[plugins]]
@@ -8,6 +8,8 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_FLAGS = "--legacy-peer-deps"
+  NODE_ENV = "production"
+  SKIP_ENV_VALIDATION = "1"
 
 # Handle redirects for SPA behavior
 [[redirects]]
