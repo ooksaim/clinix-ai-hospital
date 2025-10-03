@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { nanoid } from 'nanoid'
 
 // Use service role key for full access
 const supabase = createClient(
@@ -9,6 +10,14 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   console.log('🏥 ADMISSION REQUEST API CALLED')
+  
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({
+      success: false,
+      error: 'Server configuration error'
+    }, { status: 500 })
+  }
   
   try {
     const body = await request.json()
@@ -105,8 +114,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Generate admission number
-    const admissionNumber = `ADM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`
+    // Generate admission number using current date + random ID
+    const admissionNumber = `ADM-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${nanoid(6).toUpperCase()}`
 
     // Create admission record with pending status
     const admissionData = {

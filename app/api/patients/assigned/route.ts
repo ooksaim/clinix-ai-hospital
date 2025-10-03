@@ -19,8 +19,7 @@ export async function GET(request: NextRequest) {
     const departmentId = searchParams.get('department_id')
     const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
 
-    console.log('Fetching assigned patients for:', { doctorId, departmentId, date })
-    console.log('Environment:', process.env.NODE_ENV)
+    // Removed debug logs for production
 
     // First, get ALL visits for today (we'll filter later for different purposes)
     let allVisitsQuery = supabase
@@ -43,18 +42,18 @@ export async function GET(request: NextRequest) {
       .eq('visit_date', date)
       .order('checkin_time', { ascending: true })
 
-    console.log('Fetching ALL visits for date:', date)
+    // Get visits for the specified date
 
     // Filter by doctor if specified
     if (doctorId) {
       allVisitsQuery = allVisitsQuery.eq('assigned_doctor_id', doctorId)
-      console.log('🩺 Filtering by doctor ID:', doctorId)
+      // Filter by doctor ID
     }
 
     // Filter by department if specified  
     if (departmentId) {
       allVisitsQuery = allVisitsQuery.eq('department_id', departmentId)
-      console.log('🏥 Filtering by department ID:', departmentId)
+      // Filter by department ID
     }
 
     const { data: allVisits, error: visitsError } = await allVisitsQuery

@@ -1,56 +1,116 @@
-# Step 4 Doctor Workflow - Testing Guide
+# 🔍 DEBUGGING REAL ADMISSION REQUESTS
 
-## Overview
+## The Issue
 
-This guide helps test the complete OPD doctor workflow from patient assignment to consultation completion.
+You want to see **real-time admission requests**, not sample data. The API is returning 200 status (working), but the dashboard shows "No pending admission requests".
 
-## Prerequisites
+## 🚨 CRITICAL FIX Applied
 
-### 1. Database Setup
+I found the bug! The API returns data in this structure:
 
-First, run the database schema updates:
-
-```sql
--- Execute the contents of database-schema-step4.sql in your Supabase SQL editor
--- This creates the consultations and prescriptions tables
+```json
+{
+  "success": true,
+  "data": {
+    "requests": [...],
+    "wards": [...]
+  }
+}
 ```
 
-### 2. Test Data Requirements
+But the dashboard was looking for `data.requests` instead of `data.data.requests`.
 
-- At least 3 doctors created in different departments
-- Several patients registered with visits assigned to doctors
-- Token system working for queue management
+**✅ Fixed in**: `app/ward-admin/page.tsx` - Now handles both data structures.
 
-## Testing Workflow
+## 🧪 Testing Steps
 
-### Phase 1: Doctor Queue Dashboard
+### Step 1: Open Browser Developer Tools
 
-1. **Login as Doctor**
+1. Press `F12` or right-click → "Inspect"
+2. Go to the **Console** tab
+3. Refresh the ward admin page
 
-   - Go to `/doctor` page
-   - Login with doctor credentials
-   - Should see "My OPD Queue" tab as default
+### Step 2: Look for Debug Messages
 
-2. **Queue Display Verification**
+You should now see these debug logs:
 
-   - Stats cards show: Total Patients, Waiting, In Consultation, Completed
-   - Current Patient section (empty initially)
-   - Queue Control with "Call Next Patient" button
-   - Patient Queue tabs: Waiting, Completed, All Patients
+```
+🔍 Raw admission requests data: {...}
+📊 Found X admission requests, Y pending
+🔍 Raw ward data: {...}
+🏥 Ward stats: X wards, Y total beds, Z available
+🔍 Raw supply requests data: {...}
+📦 Found X supply requests, Y pending
+```
 
-3. **Call Next Patient**
-   - Click "Call Next Patient" button
-   - Should move first waiting patient to "In Consultation"
-   - Current Patient section should populate
-   - Patient status should update in real-time
+### Step 3: Check What's Actually in Your Database
 
-### Phase 2: Patient Consultation Interface
+The problem might be:
 
-1. **Open Consultation**
+1. **No real admission requests exist** in your database
+2. **All requests have status other than 'pending'**
+3. **Data structure mismatch** (which I just fixed)
 
-   - Click "Open Consultation" on current patient
-   - Should open full-screen consultation modal
-   - Verify patient information display at top
+### Step 4: Add Real Admission Requests
+
+If you see empty arrays in the debug logs, you need to add real admission requests.
+
+**Option A**: Create via Patient Registration
+
+1. Go to `/receptionist`
+2. Register a new patient
+3. Create admission request
+
+**Option B**: Add directly via Supabase
+Go to Supabase → Table Editor → `admissions` table and add:
+
+```sql
+INSERT INTO admissions (
+  admission_number,
+  patient_id,
+  ward_id,
+  attending_doctor_id,
+  admission_reason,
+  admission_status,
+  requested_by
+) VALUES (
+  'ADM-REAL-001',
+  'your-patient-id',
+  'your-ward-id',
+  'your-doctor-id',
+  'Emergency admission',
+  'pending',
+  'your-doctor-id'
+);
+```
+
+## 🎯 Expected Results After Fix
+
+If there are real pending admission requests, you should see:
+
+- **Pending Admissions: [actual number]** (not 0)
+- Admission cards with real patient names
+- Bed assignment options when clicking "Approve"
+
+## 🚨 Quick Check
+
+Open browser console and run:
+
+```javascript
+fetch("/api/admissions/requests")
+  .then((r) => r.json())
+  .then((d) => console.log("Admission requests:", d));
+```
+
+This will show you exactly what data the API is returning.
+
+---
+
+**Next**: After seeing the debug output, we'll know if it's a data issue or display issue!
+
+- Click "Open Consultation" on current patient
+- Should open full-screen consultation modal
+- Verify patient information display at top
 
 2. **Tab Navigation Testing**
 

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { randomUUID } from 'crypto'
+
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY environment variable is required')
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -122,46 +127,80 @@ Additional Clinical Notes: ${additionalNotes}
 • Pitfalls to avoid in similar cases
 • Evidence-based medicine insights
 
-Please provide detailed, actionable recommendations organized clearly for immediate clinical use. Focus on practical decision-making support that helps optimize patient outcomes.
-
-**MEDICAL DISCLAIMER:** This AI analysis supports clinical decision-making but does not replace physician judgment. Always consider full clinical context and patient-specific factors.`
+Please provide detailed, actionable recommendations organized clearly for immediate clinical use. Focus on practical decision-making support that helps optimize patient outcomes.`
 
     console.log('🏥 Ward AI Comprehensive Analysis Request:', {
-      patientInfo: patientInfo?.substring(0, 100),
-      opdDiagnosis: opdDiagnosis?.substring(0, 100),
-      currentSymptoms: currentSymptoms?.substring(0, 100),
-      wardFindings: wardFindings?.substring(0, 100),
-      daysSinceAdmission,
+      requestId: randomUUID(),
+      fieldCount: Object.keys(body).length,
       context
     })
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o", // Best model for medical analysis
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert ward doctor AI assistant specializing in hospital patient management, treatment progression analysis, and clinical decision support. Provide detailed, practical insights for ward-level patient care."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.3, // Lower temperature for more consistent medical advice
-    })
+    // Add timeout protection
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
-    const diagnosis = completion.choices[0]?.message?.content || 'No diagnosis generated'
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o", // Best model for medical analysis
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert ward doctor AI assistant specializing in hospital patient management, treatment progression analysis, and clinical decision support. Provide detailed, practical insights for ward-level patient care."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3, // Lower temperature for more consistent medical advice
+      }, {
+        signal: controller.signal
+      })
 
-    console.log('✅ Ward AI Diagnosis Generated:', diagnosis.substring(0, 200))
+      clearTimeout(timeoutId)
 
-    return NextResponse.json({
-      success: true,
-      diagnosis: diagnosis,
-      model: "gpt-4o",
-      context: "comprehensive_ward_analysis"
-    })
+      const diagnosis = completion.choices[0].message.content
 
+      console.log('✅ Ward AI Diagnosis Generated successfully')
+      return NextResponse.json({
+        success: true,
+        diagnosis: diagnosis,
+        model: "gpt-4o",
+        context: "comprehensive_ward_analysis"
+      })
+
+    } catch (error: any) {
+      clearTimeout(timeoutId)
+
+      console.error('❌ Ward AI Diagnosis Error:', error)
+
+      if (error.name === 'AbortError') {
+        return NextResponse.json({
+          success: false,
+          error: 'Request timeout - AI service took too long to respond'
+        }, { status: 504 })
+      }
+
+      if (error.status === 429) {
+        return NextResponse.json({
+          success: false,
+          error: 'Rate limit exceeded. Please try again later.'
+        }, { status: 429 })
+      }
+
+      if (error.status === 401) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid API key configuration'
+        }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to generate ward diagnosis'
+      }, { status: 500 })
+    }
   } catch (error: any) {
     console.error('❌ Ward AI Diagnosis Error:', error)
     return NextResponse.json({

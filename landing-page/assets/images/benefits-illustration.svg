@@ -1,0 +1,68 @@
+<svg width="500" height="400" viewBox="0 0 500 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Elements -->
+  <circle cx="250" cy="200" r="150" fill="#EFF6FF" />
+  <circle cx="250" cy="200" r="120" fill="#DBEAFE" />
+  
+  <!-- Hospital Building -->
+  <rect x="180" y="140" width="140" height="120" rx="4" fill="#FFFFFF" stroke="#2563EB" stroke-width="2"/>
+  <rect x="215" y="260" width="70" height="40" rx="2" fill="#FFFFFF" stroke="#2563EB" stroke-width="2"/>
+  
+  <!-- Hospital Sign -->
+  <rect x="235" y="120" width="30" height="30" rx="15" fill="#2563EB"/>
+  <rect x="247" y="125" width="6" height="20" fill="white"/>
+  <rect x="240" y="132" width="20" height="6" fill="white"/>
+  
+  <!-- Windows -->
+  <rect x="200" y="160" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <rect x="240" y="160" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <rect x="280" y="160" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <rect x="200" y="200" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <rect x="240" y="200" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  <rect x="280" y="200" width="20" height="20" rx="2" fill="#DBEAFE" stroke="#2563EB" stroke-width="1"/>
+  
+  <!-- Door -->
+  <rect x="235" y="260" width="30" height="40" rx="2" fill="#2563EB"/>
+  <rect x="248" y="280" width="4" height="4" rx="2" fill="#FFFFFF"/>
+  
+  <!-- AI Elements -->
+  <circle cx="120" cy="140" r="30" fill="#10B981" opacity="0.2"/>
+  <circle cx="120" cy="140" r="15" fill="#10B981"/>
+  <path d="M110 140L120 130L130 140L120 150L110 140Z" fill="white"/>
+  
+  <circle cx="380" cy="140" r="30" fill="#8B5CF6" opacity="0.2"/>
+  <circle cx="380" cy="140" r="15" fill="#8B5CF6"/>
+  <path d="M375 135H385V145H375V135Z" fill="white"/>
+  
+  <circle cx="120" cy="260" r="30" fill="#F59E0B" opacity="0.2"/>
+  <circle cx="120" cy="260" r="15" fill="#F59E0B"/>
+  <path d="M120 250V270M110 260H130" stroke="white" stroke-width="2"/>
+  
+  <circle cx="380" cy="260" r="30" fill="#EF4444" opacity="0.2"/>
+  <circle cx="380" cy="260" r="15" fill="#EF4444"/>
+  <path d="M380 255V265M375 260H385" stroke="white" stroke-width="2"/>
+  
+  <!-- Connection Lines -->
+  <path d="M135 140H180" stroke="#2563EB" stroke-width="1" stroke-dasharray="4 2"/>
+  <path d="M320 140H365" stroke="#2563EB" stroke-width="1" stroke-dasharray="4 2"/>
+  <path d="M135 260H180" stroke="#2563EB" stroke-width="1" stroke-dasharray="4 2"/>
+  <path d="M320 260H365" stroke="#2563EB" stroke-width="1" stroke-dasharray="4 2"/>
+  
+  <!-- Data Visualization Elements -->
+  <rect x="310" y="80" width="60" height="30" rx="4" fill="#FFFFFF" stroke="#2563EB" stroke-width="1"/>
+  <path d="M320 95H325M330 95H335M340 95H345M350 95H355" stroke="#2563EB" stroke-width="2" stroke-linecap="round"/>
+  
+  <rect x="130" y="80" width="60" height="30" rx="4" fill="#FFFFFF" stroke="#2563EB" stroke-width="1"/>
+  <path d="M140 95L150 90L160 95L170 85L180 95" stroke="#2563EB" stroke-width="2" stroke-linecap="round"/>
+  
+  <rect x="130" y="320" width="60" height="30" rx="4" fill="#FFFFFF" stroke="#2563EB" stroke-width="1"/>
+  <path d="M140 335H180" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+  <path d="M140 335C140 335 150 325 160 325C170 325 180 335 180 335" stroke="#2563EB" stroke-width="1" stroke-linecap="round"/>
+  
+  <rect x="310" y="320" width="60" height="30" rx="4" fill="#FFFFFF" stroke="#2563EB" stroke-width="1"/>
+  <circle cx="330" cy="335" r="5" fill="#EF4444"/>
+  <circle cx="350" cy="335" r="5" fill="#10B981"/>
+  
+  <!-- Heartbeat Line -->
+  <path d="M200 100H300" stroke="#EF4444" stroke-width="1" stroke-opacity="0.3"/>
+  <path d="M200 100H220V95H230V105H240V85H250V115H260V95H270V100H300" stroke="#EF4444" stroke-width="2"/>
+</svg>

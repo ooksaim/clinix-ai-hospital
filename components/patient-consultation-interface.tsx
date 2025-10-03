@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { nanoid } from 'nanoid'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -142,7 +143,7 @@ export function PatientConsultationInterface({
 
   const addPrescription = () => {
     const newPrescription: Prescription = {
-      id: Date.now().toString(),
+      id: nanoid(),
       medication: '',
       dosage: '',
       frequency: '',
@@ -277,8 +278,16 @@ export function PatientConsultationInterface({
   // Send query to AI for diagnosis assistance
   const askAIForDiagnosis = async () => {
     setAiLoading(true)
+    setAiResponse('🤖 **Initializing AI Analysis...** \n\nConnecting to medical AI system and preparing case review. Please wait while we analyze the clinical information provided.\n\n*This may take 30-45 seconds for complex cases.*')
+    
     try {
       console.log('🤖 Requesting AI diagnosis assistance...')
+      
+      // Create abort controller for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => {
+        controller.abort()
+      }, 50000) // 50 second timeout (slightly longer than backend)
       
       const response = await fetch('/api/ai/diagnosis', {
         method: 'POST',
@@ -294,8 +303,16 @@ export function PatientConsultationInterface({
           additionalInfo: aiQuery.additionalInfo,
           patientAge: patient.age,
           patientGender: patient.gender
-        })
+        }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Server error: ${response.status}`)
+      }
 
       const result = await response.json()
 
@@ -307,9 +324,16 @@ export function PatientConsultationInterface({
         console.error('❌ AI diagnosis failed:', result.error)
         setAiResponse(`❌ **Error:** ${result.error}\n\nPlease check your API configuration or try again later.`)
       }
-    } catch (error) {
-      console.error('💥 AI consultation network error:', error)
-      setAiResponse(`❌ **Network Error:** Unable to connect to AI service.\n\nPlease check your internet connection and try again.`)
+    } catch (error: any) {
+      console.error('💥 AI consultation error:', error)
+      
+      if (error.name === 'AbortError') {
+        setAiResponse(`⏰ **Request Timeout:** AI analysis is taking longer than expected.\n\nThis might be due to high server load. Please try again in a few moments.`)
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
+        setAiResponse(`🌐 **Network Error:** Unable to connect to AI service.\n\nPlease check your internet connection and try again.`)
+      } else {
+        setAiResponse(`❌ **Error:** ${error.message || 'An unexpected error occurred'}\n\nPlease try again later or contact support if the issue persists.`)
+      }
     } finally {
       setAiLoading(false)
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { UserRole } from '@/lib/auth'
+import { UserRole, activateUser, deactivateUser } from '@/lib/auth'
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -194,16 +194,20 @@ export default function AdminDashboard() {
 
   const handleToggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      // TODO: Implement user activation/deactivation API
-      setError('User status toggle not implemented yet')
-      // if (isActive) {
-      //   await deactivateUser(userId)
-      // } else {
-      //   await activateUser(userId)
-      // }
-      // fetchData() // Refresh users list
-    } catch (error) {
-      setError('Failed to update user status')
+      if (isActive) {
+        await deactivateUser(userId)
+      } else {
+        await activateUser(userId)
+      }
+      
+      // Clear any previous errors
+      setError('')
+      
+      // Refresh the users list
+      await fetchData()
+    } catch (error: any) {
+      console.error('Error toggling user status:', error)
+      setError(`Failed to ${isActive ? 'deactivate' : 'activate'} user: ${error.message || 'Unknown error'}`)
     }
   }
 
@@ -213,10 +217,17 @@ export default function AdminDashboard() {
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const searchTermLower = (searchTerm || '').toLowerCase()
+    const firstName = (user.first_name || '').toLowerCase()
+    const lastName = (user.last_name || '').toLowerCase()
+    const email = (user.email || '').toLowerCase()
+    
+    const matchesSearch = firstName.includes(searchTermLower) ||
+                         lastName.includes(searchTermLower) ||
+                         email.includes(searchTermLower)
+    
     const matchesRole = filterRole === 'all' || user.role === filterRole
+    
     return matchesSearch && matchesRole
   })
 

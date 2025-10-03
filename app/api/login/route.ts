@@ -53,10 +53,11 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       // Clean up the auth session if profile lookup fails
+      console.error('Profile lookup failed:', profileError)
       await supabaseAuth.auth.signOut()
       return NextResponse.json({
         success: false,
-        error: `Profile lookup failed: ${profileError.message}`
+        error: 'Profile lookup failed'
       }, { status: 500 })
     }
 

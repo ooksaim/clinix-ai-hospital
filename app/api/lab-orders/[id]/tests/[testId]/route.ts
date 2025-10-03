@@ -13,13 +13,32 @@ export async function PATCH(
 
     const { id: orderId, testId } = params
     const data = await request.json()
+    
+    // Validate test status
+    const allowedStatuses = ['pending', 'in_progress', 'completed', 'canceled']
+    
+    if (!data.test_status || typeof data.test_status !== 'string') {
+      return NextResponse.json(
+        { error: 'test_status is required and must be a string' },
+        { status: 400 }
+      )
+    }
+    
+    const trimmedStatus = data.test_status.trim()
+    
+    if (!allowedStatuses.includes(trimmedStatus)) {
+      return NextResponse.json(
+        { error: `Invalid test_status. Must be one of: ${allowedStatuses.join(', ')}` },
+        { status: 400 }
+      )
+    }
 
     // Update the test status
     const { data: updatedTest, error } = await supabase
       .from('lab_order_tests')
       .update({
-        test_status: data.test_status,
-        completed_at: data.test_status === 'completed' ? new Date().toISOString() : null,
+        test_status: trimmedStatus,
+        completed_at: trimmedStatus === 'completed' ? new Date().toISOString() : null,
         updated_at: new Date().toISOString()
       })
       .eq('id', testId)

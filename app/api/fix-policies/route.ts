@@ -1,11 +1,27 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
-    // Create service role client
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    // Validate required environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl) {
+      return NextResponse.json(
+        { error: 'NEXT_PUBLIC_SUPABASE_URL environment variable is required' },
+        { status: 500 }
+      )
+    }
+    
+    if (!serviceKey) {
+      return NextResponse.json(
+        { error: 'SUPABASE_SERVICE_ROLE_KEY environment variable is required' },
+        { status: 500 }
+      )
+    }
     
     const supabase = createClient(supabaseUrl, serviceKey, {
       auth: {
@@ -48,7 +64,8 @@ export async function POST(request: NextRequest) {
       results.push('🔄 Testing policy functionality...')
       
       // We'll test with a dummy user to see if the policy allows it
-      const testUserId = 'test-user-id-12345'
+      // Generate a unique test user ID to prevent conflicts
+      const testUserId = `test-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       const { error: testError } = await supabase
         .from('user_profiles')
         .insert({
@@ -69,8 +86,18 @@ export async function POST(request: NextRequest) {
       } else {
         results.push('✅ Test insert successful - policies are working')
         // Clean up test user
-        await supabase.from('user_profiles').delete().eq('id', testUserId)
-        results.push('🧹 Cleaned up test user')
+        try {
+          const { error: deleteError } = await supabase.from('user_profiles').delete().eq('id', testUserId)
+          if (deleteError) {
+            results.push(`⚠️ Cleanup failed: ${deleteError.message}`)
+            console.error('Failed to delete test user:', deleteError)
+          } else {
+            results.push('🧹 Cleaned up test user')
+          }
+        } catch (cleanupError: any) {
+          results.push(`❌ Cleanup error: ${cleanupError.message}`)
+          console.error('Cleanup exception:', cleanupError)
+        }
       }
 
       return NextResponse.json({

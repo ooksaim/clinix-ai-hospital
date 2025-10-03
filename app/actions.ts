@@ -127,7 +127,7 @@ export type TriageAssessment = {
 
 // Airtable configuration - Read from environment variables
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID || "appdo1HD1AP0XLkLr"
-const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || "patWl1Yzhh9iYBKF5.e6c3f3195a53ca06045a4b6b2af43d8986c6daf2a7e8c19c2642b567b5d98bb1"
+const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN || process.env.AIRTABLE_API_KEY || ""
 const AIRTABLE_API_URL = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`
 
 const airtableHeaders = {
@@ -137,17 +137,17 @@ const airtableHeaders = {
 
 // Helper function to format date for Airtable
 function formatDateForAirtable(): string {
-  // Use actual current date (August 2, 2025)
+  // Use UTC time to ensure consistency across timezones
   const now = new Date()
-  const year = now.getFullYear().toString()
-  const month = String(now.getMonth() + 1).padStart(2, "0") // getMonth() returns 0-11, so add 1
-  const day = String(now.getDate()).padStart(2, "0")
-  const hours = String(now.getHours()).padStart(2, "0")
-  const minutes = String(now.getMinutes()).padStart(2, "0")
+  const year = now.getUTCFullYear().toString()
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0") // getUTCMonth() returns 0-11, so add 1
+  const day = String(now.getUTCDate()).padStart(2, "0")
+  const hours = String(now.getUTCHours()).padStart(2, "0")
+  const minutes = String(now.getUTCMinutes()).padStart(2, "0")
 
-  // Create date in format YYYY-MM-DD HH:MM
+  // Create date in format YYYY-MM-DD HH:MM (UTC)
   const formattedDate = `${year}-${month}-${day} ${hours}:${minutes}`
-  console.log(`📆 Creating visit date with current time: ${formattedDate}`)
+  console.log(`📆 Creating visit date with UTC time: ${formattedDate}`)
   return formattedDate
 }
 

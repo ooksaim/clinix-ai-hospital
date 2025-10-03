@@ -8,8 +8,6 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Fetching all beds and their status...')
-    
     // Get all beds and their status
     const { data: bedsData, error: bedsError } = await supabase
       .from('beds')

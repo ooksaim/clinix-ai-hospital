@@ -9,7 +9,14 @@ export async function GET() {
     )
 
     // Get current date for today's stats
-    const today = new Date().toISOString().split('T')[0]
+    // Use UTC date boundaries for consistent "today" calculation
+  const now = new Date()
+  const year = now.getUTCFullYear()
+  const month = now.getUTCMonth()
+  const day = now.getUTCDate()
+  
+  const startOfDay = new Date(Date.UTC(year, month, day)).toISOString()
+  const startOfNextDay = new Date(Date.UTC(year, month, day + 1)).toISOString()
 
     // Count total tests from all pending orders (with valid patients only)
     const { data: pendingOrdersWithTests } = await supabase
@@ -37,8 +44,8 @@ export async function GET() {
         patients!inner (id)
       `)
       .eq('order_status', 'completed')
-      .gte('created_at', `${today}T00:00:00.000Z`)
-      .lt('created_at', `${today}T23:59:59.999Z`)
+      .gte('created_at', startOfDay)
+      .lt('created_at', startOfNextDay)
 
     const completedToday = completedTodayOrders?.length || 0
 

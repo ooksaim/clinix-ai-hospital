@@ -45,6 +45,27 @@ export async function POST(request: Request) {
 
     const data = await request.json()
 
+    // Validate numeric fields before processing
+    if (data.turnaround_time !== undefined && data.turnaround_time !== null && data.turnaround_time !== '') {
+      const parsedTime = parseInt(data.turnaround_time, 10)
+      if (Number.isNaN(parsedTime)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid turnaround_time: must be a valid number' },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (data.cost !== undefined && data.cost !== null && data.cost !== '') {
+      const parsedCost = parseFloat(data.cost)
+      if (!Number.isFinite(parsedCost)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid cost: must be a valid number' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Insert new lab test
     const { data: newTest, error } = await supabase
       .from('lab_tests')
@@ -60,8 +81,14 @@ export async function POST(request: Request) {
         reference_range_female: data.reference_range_female,
         reference_range_pediatric: data.reference_range_pediatric,
         critical_values: data.critical_values,
-        turnaround_time: data.turnaround_time ? parseInt(data.turnaround_time) : null,
-        cost: data.cost ? parseFloat(data.cost) : null,
+        turnaround_time: data.turnaround_time ? (() => {
+          const parsed = parseInt(data.turnaround_time, 10)
+          return Number.isNaN(parsed) ? null : parsed
+        })() : null,
+        cost: data.cost ? (() => {
+          const parsed = parseFloat(data.cost)
+          return Number.isFinite(parsed) ? parsed : null
+        })() : null,
         department: data.department,
         is_active: data.is_active !== false
       }])
@@ -70,6 +97,15 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Error creating lab test:', error)
+      
+      // Handle specific error cases
+      if (error.code === '23505' && error.message.includes('test_code')) {
+        return NextResponse.json(
+          { success: false, error: 'A lab test with this test code already exists. Please use a different test code.' },
+          { status: 400 }
+        )
+      }
+      
       return NextResponse.json(
         { success: false, error: 'Failed to create lab test' },
         { status: 500 }

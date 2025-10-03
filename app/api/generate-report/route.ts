@@ -11,7 +11,15 @@ interface ReportRequest {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  // Validate OpenAI API key early
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: 'OpenAI API key not configured' },
+      { status: 500 }
+    )
+  }
+
   try {
     const { transcript, patientInfo }: ReportRequest = await request.json()
     

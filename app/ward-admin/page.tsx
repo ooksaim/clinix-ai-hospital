@@ -115,7 +115,8 @@ export default function WardAdminPage() {
   const [loadingDoctors, setLoadingDoctors] = useState<boolean>(false)
   const [doctorPatients, setDoctorPatients] = useState<Record<string, any[]>>({})  
   const [activeTab, setActiveTab] = useState<string>('admissions')
-  const [supplyStatusFilter, setSupplyStatusFilter] = useState<'all' | 'pending' | 'approved' | 'delivered'>('all')  // Fetch ward doctors function (call when Staff tab is active)
+  const [supplyStatusFilter, setSupplyStatusFilter] = useState<'all' | 'pending' | 'approved' | 'delivered'>('all')
+  const [bedSearchQuery, setBedSearchQuery] = useState<string>('')  // Fetch ward doctors function (call when Staff tab is active)
   const fetchWardDoctors = async () => {
     setLoadingDoctors(true)
     try {
@@ -408,6 +409,30 @@ export default function WardAdminPage() {
     } catch (error) {
       console.error('Error fetching supply requests:', error)
     }
+  }
+
+  // Filter beds based on search query
+  const filterBedsBySearch = (ward: WardInfo) => {
+    if (!bedSearchQuery.trim()) {
+      return ward.beds
+    }
+    
+    const query = bedSearchQuery.toLowerCase().trim()
+    return ward.beds.filter(bed => {
+      // Search by patient name if bed is occupied
+      if (bed.bed_status === 'occupied' && bed.patient_name) {
+        return bed.patient_name.toLowerCase().includes(query)
+      }
+      // Search by bed number
+      if (bed.bed_number.toLowerCase().includes(query)) {
+        return true
+      }
+      // Search by bed type
+      if (bed.bed_type.toLowerCase().includes(query)) {
+        return true
+      }
+      return false
+    })
   }
 
   // Load all data
@@ -707,56 +732,113 @@ export default function WardAdminPage() {
 
           {/* Bed Management Tab */}
           <TabsContent value="beds" className="space-y-6">
+            {/* Search Bar */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bed className="h-5 w-5" />
+                  Bed Management
+                </CardTitle>
+                <CardDescription>Search and manage ward beds and patients</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="bed-search">Search by Patient Name, Bed Number, or Bed Type</Label>
+                    <Input
+                      id="bed-search"
+                      type="text"
+                      placeholder="Search for patient, bed number (e.g., B-101), or bed type (e.g., ICU)..."
+                      value={bedSearchQuery}
+                      onChange={(e) => setBedSearchQuery(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  {bedSearchQuery && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setBedSearchQuery('')}
+                      className="mt-6"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            
             <div className="grid gap-6">
-              {wardInfo.map((ward) => (
-                <Card key={ward.id}>
-                  <CardHeader>
-                    <CardTitle className="flex justify-between items-center">
-                      {ward.name} - {ward.ward_type}
-                      <Badge variant="outline">
-                        {ward.available_beds}/{ward.total_beds} Available
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {ward.beds.map((bed) => (
-                        <div
-                          key={bed.id}
-                          className={`p-3 rounded-lg border-2 text-center transition-all duration-200 ${
-                            bed.bed_status === 'available'
-                              ? 'border-green-300 bg-green-50'
-                              : bed.bed_status === 'occupied'
-                              ? 'border-red-300 bg-red-50 cursor-pointer hover:bg-red-100 hover:border-red-400'
-                              : 'border-yellow-300 bg-yellow-50'
-                          }`}
-                          onClick={() => {
-                            if (bed.bed_status === 'occupied') {
-                              fetchPatientDetails(bed.id)
-                            }
-                          }}
-                          title={bed.bed_status === 'occupied' ? 'Click to view patient details' : ''}
-                        >
-                          <div className="font-semibold">{bed.bed_number}</div>
-                          <div className="text-xs text-gray-600">{bed.bed_type}</div>
-                          <div className={`text-xs mt-1 ${
-                            bed.bed_status === 'available'
-                              ? 'text-green-600'
-                              : bed.bed_status === 'occupied'
-                              ? 'text-red-600'
-                              : 'text-yellow-600'
-                          }`}>
-                            {bed.bed_status}
-                            {bed.bed_status === 'occupied' && bed.patient_name && (
-                              <div className="font-bold text-red-700 text-xs mt-1">{bed.patient_name}</div>
-                            )}
-                          </div>
+              {wardInfo.map((ward) => {
+                const filteredBeds = filterBedsBySearch(ward)
+                
+                // If search is active and no beds match, don't show the ward
+                if (bedSearchQuery && filteredBeds.length === 0) {
+                  return null
+                }
+                
+                return (
+                  <Card key={ward.id}>
+                    <CardHeader>
+                      <CardTitle className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          {ward.name} - {ward.ward_type}
+                          {bedSearchQuery && filteredBeds.length !== ward.beds.length && (
+                            <Badge variant="secondary">
+                              {filteredBeds.length} of {ward.beds.length} beds shown
+                            </Badge>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        <Badge variant="outline">
+                          {ward.available_beds}/{ward.total_beds} Available
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {filteredBeds.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          No beds match your search criteria
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                          {filteredBeds.map((bed) => (
+                            <div
+                              key={bed.id}
+                              className={`p-3 rounded-lg border-2 text-center transition-all duration-200 ${
+                                bed.bed_status === 'available'
+                                  ? 'border-green-300 bg-green-50'
+                                  : bed.bed_status === 'occupied'
+                                  ? 'border-red-300 bg-red-50 cursor-pointer hover:bg-red-100 hover:border-red-400'
+                                  : 'border-yellow-300 bg-yellow-50'
+                              }`}
+                              onClick={() => {
+                                if (bed.bed_status === 'occupied') {
+                                  fetchPatientDetails(bed.id)
+                                }
+                              }}
+                              title={bed.bed_status === 'occupied' ? 'Click to view patient details' : ''}
+                            >
+                              <div className="font-semibold">{bed.bed_number}</div>
+                              <div className="text-xs text-gray-600">{bed.bed_type}</div>
+                              <div className={`text-xs mt-1 ${
+                                bed.bed_status === 'available'
+                                  ? 'text-green-600'
+                                  : bed.bed_status === 'occupied'
+                                  ? 'text-red-600'
+                                  : 'text-yellow-600'
+                              }`}>
+                                {bed.bed_status}
+                                {bed.bed_status === 'occupied' && bed.patient_name && (
+                                  <div className="font-bold text-red-700 text-xs mt-1">{bed.patient_name}</div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           </TabsContent>
 

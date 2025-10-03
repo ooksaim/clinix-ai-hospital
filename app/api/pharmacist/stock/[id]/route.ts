@@ -24,9 +24,17 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       update_type = 'adjustment' // adjustment, restock, or correction
     } = body
 
-    if (current_stock === undefined) {
+    if (current_stock === undefined || current_stock === null) {
       return NextResponse.json({ 
         error: 'current_stock is required' 
+      }, { status: 400 })
+    }
+
+    // Validate current_stock is a positive number
+    const stockValue = Number(current_stock)
+    if (Number.isNaN(stockValue) || !Number.isFinite(stockValue) || stockValue < 0) {
+      return NextResponse.json({ 
+        error: 'current_stock must be a valid positive number' 
       }, { status: 400 })
     }
 
@@ -56,8 +64,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     console.log(`   Type: ${update_type}`)
 
     // Update the stock item
-    const updateData = {
-      current_stock: newStock,
+    const updateData: any = {
+      current_stock: stockValue,
       updated_at: new Date().toISOString()
     }
 

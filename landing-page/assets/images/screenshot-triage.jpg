@@ -1,0 +1,67 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="675" fill="#F8FAFC"/>
+  
+  <!-- Header -->
+  <rect y="0" width="1200" height="60" fill="#FFFFFF"/>
+  <rect x="20" y="15" width="180" height="30" rx="4" fill="#2563EB"/>
+  <rect x="980" y="15" width="80" height="30" rx="15" fill="#EFF6FF"/>
+  <rect x="1080" y="15" width="80" height="30" rx="15" fill="#2563EB"/>
+  
+  <!-- Main Title -->
+  <rect x="100" y="100" width="400" height="40" rx="4" fill="#1E40AF"/>
+  <rect x="100" y="150" width="300" height="15" rx="2" fill="#64748B"/>
+  
+  <!-- Triage Form -->
+  <rect x="100" y="200" width="500" height="450" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  
+  <rect x="140" y="230" width="150" height="20" rx="2" fill="#1E293B"/>
+  <rect x="140" y="260" width="400" height="40" rx="4" fill="#F1F5F9"/>
+  
+  <rect x="140" y="320" width="150" height="20" rx="2" fill="#1E293B"/>
+  <rect x="140" y="350" width="400" height="80" rx="4" fill="#F1F5F9"/>
+  
+  <rect x="140" y="450" width="150" height="20" rx="2" fill="#1E293B"/>
+  <rect x="140" y="480" width="130" height="40" rx="4" fill="#F1F5F9"/>
+  <rect x="290" y="480" width="130" height="40" rx="4" fill="#F1F5F9"/>
+  
+  <rect x="140" y="540" width="180" height="50" rx="25" fill="#2563EB"/>
+  <rect x="340" y="540" width="180" height="50" rx="25" fill="#F1F5F9"/>
+  
+  <!-- AI Analysis Card -->
+  <rect x="650" y="200" width="450" height="450" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="680" y="230" width="200" height="20" rx="2" fill="#1E293B"/>
+  
+  <!-- AI Thinking Animation -->
+  <circle cx="730" cy="290" r="30" fill="#DBEAFE"/>
+  <circle cx="800" cy="290" r="30" fill="#BFDBFE"/>
+  <circle cx="870" cy="290" r="30" fill="#93C5FD"/>
+  
+  <!-- Triage Result -->
+  <rect x="690" y="350" width="370" height="60" rx="8" fill="#FEF2F2" stroke="#EF4444" stroke-width="2"/>
+  <rect x="720" y="370" width="150" height="20" rx="2" fill="#EF4444"/>
+  <rect x="720" y="395" width="100" height="10" rx="2" fill="#64748B"/>
+  <circle cx="870" cy="380" r="20" fill="#EF4444"/>
+  <rect x="865" y="375" width="10" height="10" fill="white"/>
+  
+  <!-- Recommendation Section -->
+  <rect x="690" y="430" width="370" height="1" fill="#E2E8F0"/>
+  <rect x="690" y="450" width="200" height="20" rx="2" fill="#1E293B"/>
+  
+  <rect x="690" y="480" width="370" height="40" rx="4" fill="#F1F5F9"/>
+  <rect x="710" y="495" width="330" height="10" rx="2" fill="#64748B"/>
+  
+  <rect x="690" y="530" width="370" height="40" rx="4" fill="#F1F5F9"/>
+  <rect x="710" y="545" width="330" height="10" rx="2" fill="#64748B"/>
+  
+  <rect x="690" y="580" width="370" height="40" rx="4" fill="#F1F5F9"/>
+  <rect x="710" y="595" width="330" height="10" rx="2" fill="#64748B"/>
+  
+  <!-- WHO Triage Scale -->
+  <rect x="100" y="670" width="1000" height="5" rx="2.5" fill="#E2E8F0"/>
+  <circle cx="300" cy="670" r="15" fill="#22C55E"/>
+  <circle cx="500" cy="670" r="15" fill="#FACC15"/>
+  <circle cx="700" cy="670" r="15" fill="#F97316"/>
+  <circle cx="900" cy="670" r="15" fill="#EF4444"/>
+  <circle cx="900" cy="670" r="8" fill="white"/>
+</svg>

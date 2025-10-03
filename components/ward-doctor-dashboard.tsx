@@ -240,7 +240,9 @@ export default function WardDoctorDashboard() {
                 </div>
                 <div className="ml-3 min-w-0">
                   <p className="text-xs font-medium text-gray-600">Pending Tasks</p>
-                  <p className="text-xl font-bold text-gray-900">12</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {patients.filter(p => p.admissionStatus === 'pending' || p.admissionStatus === 'in_consultation').length}
+                  </p>
                 </div>
               </div>
             </CardContent>

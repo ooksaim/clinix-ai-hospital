@@ -11,7 +11,32 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { change } = await request.json()
+    const body = await request.json()
+    const { change } = body
+    
+    // Validate change value
+    if (change === undefined || change === null) {
+      return NextResponse.json(
+        { error: 'change value is required' },
+        { status: 400 }
+      )
+    }
+    
+    const numericChange = Number(change)
+    
+    if (Number.isNaN(numericChange) || !Number.isInteger(numericChange) || !Number.isSafeInteger(numericChange)) {
+      return NextResponse.json(
+        { error: 'change must be a valid integer' },
+        { status: 400 }
+      )
+    }
+    
+    if (numericChange < -1000000 || numericChange > 1000000) {
+      return NextResponse.json(
+        { error: 'change value out of safe range (-1,000,000 to 1,000,000)' },
+        { status: 400 }
+      )
+    }
     const supplyId = params.id
 
     console.log(`🏥 Ward Admin - Updating stock for supply ${supplyId}, change: ${change}`)

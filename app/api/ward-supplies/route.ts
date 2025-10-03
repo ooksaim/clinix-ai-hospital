@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const wardId = searchParams.get('ward_id');
 
-    // For now, we'll fetch supplies from all wards since we don't have ward context
+        // Filter by ward_id if provided in query params, otherwise return supplies from all wards
     // In a real implementation, you'd get the ward_id from the doctor's assignment
     let query = supabase
       .from('ward_supplies')

@@ -1,4 +1,50 @@
-import { createClient } from '@supabase/supabase-js'
+impexport async function POST(request: Request) {
+  try {
+    const body = await request.json()
+    const { email, password, first_name, last_name } = body
+
+    // Validate required fields
+    if (!email?.trim()) {
+      return Response.json(
+        { error: 'Email is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!password || password.length < 8) {
+      return Response.json(
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      )
+    }
+
+    if (!first_name?.trim()) {
+      return Response.json(
+        { error: 'First name is required' },
+        { status: 400 }
+      )
+    }
+
+    if (!last_name?.trim()) {
+      return Response.json(
+        { error: 'Last name is required' },
+        { status: 400 }
+      )
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return Response.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      )
+    }
+
+    // Normalize inputs
+    const normalizedEmail = email.trim().toLowerCase()
+    const trimmedFirstName = first_name.trim()
+    const trimmedLastName = last_name.trim() { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {

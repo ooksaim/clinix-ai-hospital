@@ -1,0 +1,107 @@
+<svg width="1200" height="675" viewBox="0 0 1200 675" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="675" fill="#F8FAFC"/>
+  
+  <!-- Header -->
+  <rect y="0" width="1200" height="60" fill="#FFFFFF"/>
+  <rect x="20" y="15" width="180" height="30" rx="4" fill="#2563EB"/>
+  <rect x="980" y="15" width="80" height="30" rx="15" fill="#EFF6FF"/>
+  <rect x="1080" y="15" width="80" height="30" rx="15" fill="#2563EB"/>
+  
+  <!-- Main Title -->
+  <rect x="40" y="100" width="400" height="40" rx="4" fill="#1E40AF"/>
+  <rect x="40" y="150" width="300" height="15" rx="2" fill="#64748B"/>
+  
+  <!-- Date Range Selector -->
+  <rect x="960" y="100" width="200" height="40" rx="4" fill="#F1F5F9"/>
+  
+  <!-- KPI Cards -->
+  <rect x="40" y="200" width="275" height="120" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="220" width="120" height="15" rx="2" fill="#94A3B8"/>
+  <rect x="60" y="250" width="150" height="30" rx="4" fill="#2563EB"/>
+  <rect x="60" y="290" width="100" height="15" rx="2" fill="#CBD5E1"/>
+  
+  <rect x="335" y="200" width="275" height="120" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="355" y="220" width="120" height="15" rx="2" fill="#94A3B8"/>
+  <rect x="355" y="250" width="150" height="30" rx="4" fill="#10B981"/>
+  <rect x="355" y="290" width="100" height="15" rx="2" fill="#CBD5E1"/>
+  
+  <rect x="630" y="200" width="275" height="120" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="650" y="220" width="120" height="15" rx="2" fill="#94A3B8"/>
+  <rect x="650" y="250" width="150" height="30" rx="4" fill="#F59E0B"/>
+  <rect x="650" y="290" width="100" height="15" rx="2" fill="#CBD5E1"/>
+  
+  <rect x="925" y="200" width="275" height="120" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="945" y="220" width="120" height="15" rx="2" fill="#94A3B8"/>
+  <rect x="945" y="250" width="150" height="30" rx="4" fill="#EF4444"/>
+  <rect x="945" y="290" width="100" height="15" rx="2" fill="#CBD5E1"/>
+  
+  <!-- Main Charts -->
+  <rect x="40" y="340" width="560" height="320" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="360" width="200" height="20" rx="2" fill="#1E293B"/>
+  
+  <!-- Line Chart -->
+  <path d="M60 550H540" stroke="#E2E8F0" stroke-width="1"/>
+  <path d="M60 500H540" stroke="#E2E8F0" stroke-width="1"/>
+  <path d="M60 450H540" stroke="#E2E8F0" stroke-width="1"/>
+  <path d="M60 400H540" stroke="#E2E8F0" stroke-width="1"/>
+  
+  <path d="M60 550L100 520L140 530L180 480L220 500L260 450L300 440L340 460L380 430L420 400L460 410L500 390L540 370" stroke="#2563EB" stroke-width="2"/>
+  <path d="M60 550L100 530L140 540L180 510L220 520L260 500L300 510L340 490L380 510L420 490L460 500L500 480L540 470" stroke="#10B981" stroke-width="2"/>
+  
+  <circle cx="100" cy="520" r="4" fill="#2563EB"/>
+  <circle cx="140" cy="530" r="4" fill="#2563EB"/>
+  <circle cx="180" cy="480" r="4" fill="#2563EB"/>
+  <circle cx="220" cy="500" r="4" fill="#2563EB"/>
+  <circle cx="260" cy="450" r="4" fill="#2563EB"/>
+  <circle cx="300" cy="440" r="4" fill="#2563EB"/>
+  <circle cx="340" cy="460" r="4" fill="#2563EB"/>
+  <circle cx="380" cy="430" r="4" fill="#2563EB"/>
+  <circle cx="420" cy="400" r="4" fill="#2563EB"/>
+  <circle cx="460" cy="410" r="4" fill="#2563EB"/>
+  <circle cx="500" cy="390" r="4" fill="#2563EB"/>
+  <circle cx="540" cy="370" r="4" fill="#2563EB"/>
+  
+  <circle cx="100" cy="530" r="4" fill="#10B981"/>
+  <circle cx="140" cy="540" r="4" fill="#10B981"/>
+  <circle cx="180" cy="510" r="4" fill="#10B981"/>
+  <circle cx="220" cy="520" r="4" fill="#10B981"/>
+  <circle cx="260" cy="500" r="4" fill="#10B981"/>
+  <circle cx="300" cy="510" r="4" fill="#10B981"/>
+  <circle cx="340" cy="490" r="4" fill="#10B981"/>
+  <circle cx="380" cy="510" r="4" fill="#10B981"/>
+  <circle cx="420" cy="490" r="4" fill="#10B981"/>
+  <circle cx="460" cy="500" r="4" fill="#10B981"/>
+  <circle cx="500" cy="480" r="4" fill="#10B981"/>
+  <circle cx="540" cy="470" r="4" fill="#10B981"/>
+  
+  <!-- X-axis Labels -->
+  <rect x="90" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  <rect x="170" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  <rect x="250" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  <rect x="330" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  <rect x="410" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  <rect x="490" y="560" width="20" height="10" rx="2" fill="#94A3B8"/>
+  
+  <!-- Pie Chart -->
+  <rect x="620" y="340" width="560" height="320" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="640" y="360" width="200" height="20" rx="2" fill="#1E293B"/>
+  
+  <path d="M900 450 A100 100 0 0 1 850 547" stroke="#2563EB" stroke-width="40"/>
+  <path d="M850 547 A100 100 0 0 1 759 529" stroke="#10B981" stroke-width="40"/>
+  <path d="M759 529 A100 100 0 0 1 800 353" stroke="#F59E0B" stroke-width="40"/>
+  <path d="M800 353 A100 100 0 0 1 900 450" stroke="#EF4444" stroke-width="40"/>
+  
+  <!-- Legend -->
+  <rect x="700" y="550" width="15" height="15" rx="2" fill="#2563EB"/>
+  <rect x="725" y="553" width="80" height="10" rx="2" fill="#94A3B8"/>
+  
+  <rect x="830" y="550" width="15" height="15" rx="2" fill="#10B981"/>
+  <rect x="855" y="553" width="80" height="10" rx="2" fill="#94A3B8"/>
+  
+  <rect x="960" y="550" width="15" height="15" rx="2" fill="#F59E0B"/>
+  <rect x="985" y="553" width="80" height="10" rx="2" fill="#94A3B8"/>
+  
+  <rect x="1090" y="550" width="15" height="15" rx="2" fill="#EF4444"/>
+  <rect x="1115" y="553" width="40" height="10" rx="2" fill="#94A3B8"/>
+</svg>
