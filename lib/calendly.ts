@@ -2,7 +2,7 @@
 const CALENDLY_API_BASE = 'https://api.calendly.com'
 
 // Your Calendly access token
-const CALENDLY_ACCESS_TOKEN = 'eyJraWQiOiIxY2UxZTEzNjE3ZGNmNzY2YjNjZWJjY2Y4ZGM1YmFmYThhNjVlNjg0MDIzZjdjMzJiZTgzNDliMjM4MDEzNWI0IiwidHlwIjoiUEFUIiwiYWxnIjoiRVMyNTYifQ.eyJpc3MiOiJodHRwczovL2F1dGguY2FsZW5kbHkuY29tIiwiaWF0IjoxNzU1Njg0NjQxLCJqdGkiOiI5NjQxMjFkZi01Mjk5LTQ2MWEtYmRkNS0zYzZjNTA2MDlhODkiLCJ1c2VyX3V1aWQiOiJlYzY5MDI0OC1mOGVkLTQ2NzItODkyMC1mMTYxOTNiMDJkY2IifQ.JxRb8zoR4JeQ1yNVJeAgcqEoUSFZKi80JAyLqiFb7cxkDREyzC1TliPV0QUbiUaHO0YtQdfL0cFQEmTJ2X6lAw'
+const CALENDLY_ACCESS_TOKEN = process.env.CALENDLY_ACCESS_TOKEN || ''
 
 const calendlyHeaders = {
   'Authorization': `Bearer ${CALENDLY_ACCESS_TOKEN}`,

@@ -710,7 +710,7 @@ export async function analyzeSymptomsWithAI(prompt: string): Promise<string> {
       console.log(`🤖 AI Analysis attempt ${attempt}/${maxRetries}`)
 
       // Check if API key exists - use the new key
-      const apiKey = "AIzaSyCan53ZqbQ6AMI6TNkCGBQodU9r9cfBS5s"
+      const apiKey = process.env.GOOGLE_API_KEY || ""
       if (!apiKey) {
         throw new Error("Google API key is not configured. Please check your environment variables.")
       }
@@ -799,7 +799,7 @@ export async function chatWithAI(messages: Message[]): Promise<string> {
       console.log(`💬 Chat attempt ${attempt}/${maxRetries}`)
 
       // Check if API key exists - use the new key
-      const apiKey = "AIzaSyCan53ZqbQ6AMI6TNkCGBQodU9r9cfBS5s"
+      const apiKey = process.env.GOOGLE_API_KEY || ""
       if (!apiKey) {
         throw new Error("Google API key is not configured. Please check your environment variables.")
       }
